@@ -1,0 +1,2289 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Student Portal</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <!-- Chart.js for Performance Graph -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'portal-blue': '#4A72FF',
+                        'portal-gray': '#F7F8FA',
+                        'present': '#34D399',
+                        'absent': '#F87171',
+                        'late': '#FBBF24',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* --- Shared Layout Styles --- */
+        :root {
+            --font-main: 'Inter', sans-serif; --transition-speed: 0.3s; --page-transition-duration: 0.4s; --bg-main: #F8F9FA;
+            --bg-content: #FFFFFF; --border-color: #E9ECEF; --text-primary: #1F2937; --text-secondary: #6C757D;
+            --menu-title-color: #ADB5BD; --accent-primary: #5D50E6; --accent-primary-hover: #4338CA;
+            --accent-primary-light: #E9E7FD; --notification-bg-color: #FA3E3E; --shadow-color-light: rgba(0, 0, 0, 0.05);
+            --danger-color: #EF4444;
+        }
+        [data-theme="dark"] {
+            --bg-main: #121212; --bg-content: #1E1E1E; --border-color: #333333; --text-primary: #E0E0E0;
+            --text-secondary: #A0A0A0; --menu-title-color: #7A7A7A; --accent-primary: #8A7FFF;
+            --accent-primary-hover: #6366F1; --accent-primary-light: #2A2A44; --notification-bg-color: #FA3E3E;
+            --shadow-color-light: rgba(0, 0, 0, 0.2); --danger-color: #F87171;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-10px); } }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font-main); color: var(--text-primary); background-color: var(--bg-main); overflow: hidden; height: 100vh; width: 100vw; transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease; }
+        .app-container { display: flex; height: 100vh; }
+        .sidebar { width: 260px; min-width: 260px; padding: 20px 15px; display: flex; flex-direction: column; background-color: var(--bg-content); border-right: 1px solid var(--border-color); transition: all var(--transition-speed) ease; }
+        .sidebar-header { position: relative; }
+        .user-switch-wrapper { display: flex; align-items: center; gap: 15px; padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); cursor: pointer; }
+        .user-switch-wrapper .logo-icon { color: var(--accent-primary); width: 32px; height: 32px; flex-shrink: 0; }
+        .user-switch-wrapper .logo-details { display: flex; flex-direction: column; flex-grow: 1; }
+        .user-switch-wrapper .logo-name { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+        .user-switch-wrapper .logo-subtext { font-size: 12px; color: var(--text-secondary); }
+        .user-switch-arrow { color: var(--text-secondary); transition: transform var(--transition-speed) ease; }
+        .user-switch-arrow.active { transform: rotate(180deg); }
+        .user-switcher-menu { position: absolute; top: 75px; left: 0; width: 100%; background-color: var(--bg-content); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 8px; z-index: 10; opacity: 0; visibility: hidden; transform: translateY(10px) scale(0.95); transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease, visibility var(--transition-speed) ease; }
+        .user-switcher-menu.active { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
+        .user-switcher-menu .switcher-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 6px; cursor: pointer; transition: background-color var(--transition-speed) ease; }
+        .user-switcher-menu .switcher-item:hover { background-color: var(--accent-primary-light); }
+        .user-switcher-menu .switcher-item i { color: var(--text-secondary); width: 20px; text-align: center; }
+        .user-switcher-menu .switcher-item span { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+        .sidebar-menu { flex-grow: 1; overflow-y: auto; }
+        .menu-section { margin-bottom: 25px; }
+        .menu-title { display: block; margin-bottom: 10px; padding: 0 10px; font-size: 12px; font-weight: 500; color: var(--menu-title-color); text-transform: uppercase; letter-spacing: 0.5px; transition: opacity 0.2s ease; }
+        .nav-links { list-style: none; }
+        .nav-links li a { display: flex; align-items: center; padding: 12px 10px; margin-bottom: 5px; border-radius: 8px; text-decoration: none; color: var(--text-primary); font-size: 14px; font-weight: 500; transition: all var(--transition-speed) ease; position: relative; }
+        .nav-links li a i { font-size: 18px; margin-right: 15px; width: 20px; text-align: center; color: var(--text-secondary); transition: color var(--transition-speed) ease, margin-right var(--transition-speed) ease; }
+        .nav-links li a > span { transition: opacity 0.2s ease, visibility 0.2s ease, width 0.2s ease; }
+        .nav-links li:not(.active) a:hover { background-color: var(--accent-primary-light); color: var(--accent-primary); }
+        .nav-links li:not(.active) a:hover i { color: var(--accent-primary); }
+        .nav-links li.active > a:not(.dropdown-toggle) { background-color: var(--accent-primary-light); color: var(--accent-primary); font-weight: 600; }
+        .nav-links li.active > a:not(.dropdown-toggle) i { color: var(--accent-primary); }
+        .nav-links li.active > a:not(.dropdown-toggle)::before { content: ''; position: absolute; left: -15px; top: 50%; transform: translateY(-50%); height: 70%; width: 4px; background-color: var(--accent-primary); border-radius: 0 4px 4px 0; transition: all var(--transition-speed) ease; }
+        .nav-links li.has-submenu .dropdown-toggle { justify-content: space-between; width: 100%; cursor: pointer; }
+        .nav-links li.has-submenu .dropdown-toggle span { display: flex; align-items: center; }
+        .dropdown-arrow { font-size: 12px; transition: transform var(--transition-speed) ease, opacity 0.2s ease; color: var(--text-secondary); }
+        .nav-links li.has-submenu.active > .dropdown-toggle .dropdown-arrow { transform: rotate(180deg); }
+        .submenu { list-style: none; padding-left: 25px; max-height: 0; overflow: hidden; transition: max-height 0.4s ease-in-out; }
+        .nav-links li.has-submenu.active .submenu { max-height: 500px; margin-top: 5px; }
+        .submenu li a { display: flex; align-items: center; padding: 8px 10px; font-size: 13px; color: var(--text-secondary); }
+        .submenu li a:hover { color: var(--accent-primary); background-color: transparent; }
+        .submenu li a img { width: 24px; height: 24px; border-radius: 50%; margin-right: 12px; object-fit: cover; }
+        .submenu li a .notification-badge { margin-left: auto; background-color: var(--accent-primary); color: #fff; font-size: 10px; font-weight: 600; min-width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
+        .sidebar-footer .user-profile { display: flex; align-items: center; gap: 15px; }
+        .sidebar-footer .user-profile img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+        .sidebar-footer .user-profile .user-details { display: flex; flex-direction: column; }
+        .sidebar-footer .user-profile .user-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+        .sidebar-footer .user-profile .user-email { font-size: 12px; color: var(--text-secondary); }
+        .theme-switcher-container { display: flex; align-items: center; justify-content: space-between; padding: 12px 10px; margin-bottom: 20px; }
+        .theme-switcher-container span { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+        .theme-switch { cursor: pointer; background-color: var(--accent-primary-light); width: 50px; height: 26px; border-radius: 50px; position: relative; display: flex; align-items: center; padding: 0 5px; }
+        .switch-thumb { background-color: #fff; width: 18px; height: 18px; border-radius: 50%; position: absolute; left: 4px; transition: transform var(--transition-speed) ease; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .theme-switch i { font-size: 12px; color: var(--accent-primary); }
+        .theme-switch .fa-sun { margin-left: auto; }
+        [data-theme="dark"] .switch-thumb { transform: translateX(24px); background-color: var(--bg-content); }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        header { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2.5rem; position: sticky; top: 0; z-index: 100; background-color: var(--bg-main); border-bottom: 1px solid var(--border-color); min-height: 90px; }
+        .header-actions { display: flex; align-items: center; gap: 1.5rem; }
+        .profile { display: flex; align-items: center; gap: 12px; }
+        .profile img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color); }
+        .profile span { font-weight: 600; font-size: 0.95rem; }
+        .search { background: var(--bg-content); position: relative; display: flex; border-radius: 8px; box-shadow: 0 4px 16px -1px var(--shadow-color-light); width: 62px; height: 62px; padding: 0; transition: width 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55), background .1s ease, transform .1s ease; }
+        .search .bar { position: absolute; left: 15px; top: 15px; width: 32px; height: 32px; overflow: hidden; cursor: pointer; z-index: 2; }
+        .search form { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; position: relative; height: 100%;}
+        .search.open { width: 350px; }
+        .search.open .bar { left: 16px; top: 15px; cursor: default; }
+        .search.open form { opacity: 1; pointer-events: auto; }
+        .search .bar span { display: block; color: #fff; position: absolute; left: 12px; top: 0; line-height: 32px; font-weight: 500; font-size: 16px; opacity: 0; right: 16px; overflow: hidden; white-space: nowrap; }
+        .search .bar:before { content: ''; position: absolute; display: block; left: 0; top: 0; bottom: 0; right: 16px; border-radius: 16px 0 0 16px; background: var(--accent-primary); opacity: 0; }
+        .search .bar .icon { flex: 0 0 32px; width: 32px; height: 32px; background: var(--accent-primary); border-radius: 50%; position: absolute; z-index: 1; top: 0; right: 0; transform-style: preserve-3d; transform-origin: 0 0; transform: scale(.8); transition: transform .4s ease 0s, background .1s ease, opacity 0.3s ease; }
+        .search .bar .icon:before, .search .bar .icon:after { content: ''; display: block; position: absolute; backface-visibility: hidden; border-radius: 50%; }
+        .search .bar .icon:before { background: #fff; left: 4px; top: 4px; right: 4px; bottom: 4px; z-index: 2; transform: rotateY(0deg); transition: background .1s ease; }
+        .search .bar .icon:after { background: var(--accent-primary); left: 0; top: 0; right: 0; bottom: 0; transform: rotateY(180deg); transition: background .1s ease; }
+        .search .bar .icon i { left: 75%; top: 84%; position: absolute; display: block; transform: rotate(-45deg); transform-origin: 0 0; }
+        .search .bar .icon i:before { content: ''; width: 4px; height: 16px; border-radius: 2px; background: var(--accent-primary); display: block; transform-origin: 50% 0; transition: transform .4s ease 0s, background .1s ease; }
+        .search form input { height: 100%; width: 0; padding: 0 0 0 48px; color: var(--text-primary); caret-color: var(--accent-primary); border: 0; background: 0; outline: none; font-size: 16px; font-family: inherit; font-weight: 500; transition: width 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55), color .1s ease; }
+        .search.open form input { width: 100%; padding-right: 16px; }
+        .search form input::placeholder { color: var(--text-secondary); opacity: 1; }
+        .search form span { position: absolute; visibility: hidden; top: -9999px; left: -9999px; white-space: pre; font-size: 16px; font-family: inherit; font-weight: 500; }
+        .search .close { border-radius: 50%; position: absolute; right: 16px; width: 32px; height: 32px; top: 15px; background: var(--accent-primary-light); cursor: pointer; opacity: 0; visibility: hidden; transform: translate(-8px, 0); transition: transform .3s ease 0s, opacity .3s ease 0s, visibility .3s ease 0s; }
+        .search .close:before, .search .close:after { content: ''; position: absolute; width: 2px; border-radius: 1px; height: 14px; background: var(--text-secondary); display: block; left: 50%; top: 50%; transition: background .3s ease; }
+        .search .close:before { transform: translate(-50%, -50%) rotate(45deg); }
+        .search .close:after { transform: translate(-50%, -50%) rotate(-45deg); }
+        .search ul { background: var(--bg-content); border-radius: 8px; overflow: hidden; margin: 0; padding: 8px 0 24px 0; list-style: none; position: absolute; left: 16px; top: 62px; white-space: nowrap; transition: opacity 0.3s ease; visibility: hidden; opacity: 0; }
+        .search ul.show { visibility: visible; opacity: 1; }
+        .search ul.show li { opacity: 1; visibility: visible; transform: translate(0, 0); }
+        .search ul li { margin: 0 0 20px 0; opacity: 0; visibility: hidden; transition: all .3s ease; transform: translate(0, -6px); }
+        .search ul li a { display: block; font-size: 12px; text-decoration: none; padding-left: 36px; padding-right: 24px; position: relative; }
+        .search ul li a h5 { margin: 0; color: var(--text-primary); font-size: 12px; }
+        .search ul li a p { margin: 4px 0; color: var(--text-secondary); }
+        .search.submit { background: var(--accent-primary); transform: scale(.92); }
+        .search.submit .bar .icon { background: #fff; }
+        .search.submit .bar .icon:before { background: var(--accent-primary); }
+        .search.submit .bar .icon:after { background: #fff; }
+        .search.submit .bar .icon i:before { background: #fff; }
+        .search.submit form input { color: #fff; caret-color: #fff; }
+        .search.prepare .bar:before { opacity: 1; transition: opacity 0s ease 1.25s; }
+        .search.prepare .bar .icon { transform: scale(1); transform-origin: 50% 50% 0; transition: transform .4s ease .85s, transform-origin 0s ease 1.25s, background .1s ease; }
+        .search.prepare .bar .icon i:before { transform: scaleY(0); transition: transform .4s ease .4s, background .1s ease; }
+        .search.animate .bar .icon { transform: rotateY(75deg); transition: transform .6s ease 0s; }
+        .search.animate .bar span { opacity: 1; }
+        .search.done { padding-right: 56px; transition: padding .4s ease; }
+        .search.done .bar .icon { transform: rotateY(180deg); opacity: 0; }
+        .search.done .close { opacity: 1; visibility: visible; transform: translate(0, 0); transition: transform .4s ease .5s, opacity .4s ease .5s, visibility .4s ease .5s; }
+        .search.done .close:hover { background: var(--accent-primary-hover); }
+        .search.done .close:hover:before, .search.done .close:hover:after { background: #fff; }
+        .search.reset .bar:before { opacity: 0; transition: opacity 0s ease .4s; }
+        .search.reset .bar .icon { transform: rotateY(0deg); transition: transform .4s ease 0s; }
+        .header-left-cluster { display: flex; align-items: center; gap: 1.5rem; }
+        .sidebar-toggle { font-size: 20px; color: var(--text-secondary); cursor: pointer; transition: all var(--transition-speed) ease; padding: 8px; border-radius: 8px; }
+        .sidebar-toggle:hover { color: var(--accent-primary); background-color: var(--accent-primary-light); }
+        .sidebar.collapsed { width: 88px; min-width: 88px; padding-left: 0; padding-right: 0; }
+        .sidebar.collapsed .user-switch-wrapper, .sidebar.collapsed .nav-links li a, .sidebar.collapsed .theme-switcher-container { justify-content: center; }
+        .sidebar.collapsed .user-switch-wrapper { padding-left: 15px; padding-right: 15px; }
+        .sidebar.collapsed .logo-details, .sidebar.collapsed .user-switch-arrow, .sidebar.collapsed .nav-links li a > span, .sidebar.collapsed .has-submenu .dropdown-toggle > span, .sidebar.collapsed .menu-title, .sidebar.collapsed .dropdown-arrow, .sidebar.collapsed .user-details, .sidebar.collapsed .theme-switcher-container > span { opacity: 0; visibility: hidden; width: 0; transition: opacity 0.2s ease, visibility 0.2s ease, width 0.2s ease; white-space: nowrap; }
+        .sidebar.collapsed .nav-links li a i { margin-right: 0; }
+        .sidebar.collapsed .nav-links li.active > a:not(.dropdown-toggle)::before { left: 0; border-radius: 0; height: 100%; opacity: 0.5; }
+        .sidebar.collapsed .has-submenu.active .submenu, .sidebar.collapsed .has-submenu .submenu { display: none; }
+        .sidebar.collapsed .has-submenu .dropdown-toggle { pointer-events: none; }
+        .pages { padding: 2.5rem; }
+        .page { display: none; animation: fadeIn var(--page-transition-duration) ease-out forwards; }
+        .page.active { display: block; }
+        .page.hiding { animation: fadeOut var(--page-transition-duration) ease-in forwards; }
+        
+        /* --- Timetable specific styles (from timetable.html) --- */
+        .subject-cell {
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            user-select: none;
+        }
+        .subject-cell:hover { background-color: #f1f5f9; /* slate-100 */ }
+        .subject-cell:active { background-color: #e2e8f0; /* slate-200 */ transform: scale(0.97); }
+        #class-details-card {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out, margin-bottom 0.5s ease-in-out;
+            margin-bottom: 0;
+        }
+        #class-details-card.active {
+            margin-bottom: 1.5rem; /* same as mb-6 when active */
+        }
+
+        /* --- Attendance Log specific styles (from try2.html) --- */
+        .calendar-day {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 2.75rem; /* h-11 */
+        }
+        .calendar-day:hover { background-color: #eff6ff; /* blue-50 */ }
+        
+        /* --- Mark Attendance specific styles (from try2.html) --- */
+        .mark-attendance-page {
+            background-color: #F7F8FA; /* Specific BG for Mark Attendance */
+        }
+        #lecture-hall {
+            height: 250px;
+            border-radius: 0.5rem;
+            background-color: #fff;
+            border: 1px solid #e5e7eb;
+            position: relative;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .desk-row { display: flex; justify-content: center; gap: 2rem; width: 100%; margin-bottom: 0.5rem; }
+        .desk { width: 30px; height: 20px; background-color: #e5e7eb; border-radius: 4px; position: relative; }
+        .student-dot {
+            position: absolute;
+            width: 8px; height: 8px; border-radius: 50%;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            transition: background-color 0.3s ease;
+        }
+        .student-dot.present { background-color: #22c55e; }
+        .student-dot.absent { background-color: #ef4444; }
+        .student-dot.late { background-color: #f59e0b; }
+
+        #teacher-marker {
+            width: 24px; height: 24px; border-radius: 9999px; position: absolute;
+            background-color: #ef4444;
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.7);
+            top: 15%; left: 50%; transform: translate(-50%, -50%); z-index: 10;
+        }
+
+        .gps-signal::before {
+            content: '';
+            position: absolute; top: 50%; left: 50%; width: 100%; height: 100%;
+            border: 2px solid #ef4444; border-radius: 50%;
+            transform: translate(-50%, -50%) scale(1); opacity: 0;
+            animation: pulse-gps 3s infinite;
+        }
+        @keyframes pulse-gps {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.75; }
+            100% { transform: translate(-50%, -50%) scale(10); opacity: 0; }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a3a3a3; }
+        
+        .status-btn-group input[type="radio"] { display: none; }
+        .status-btn {
+            display: inline-flex; align-items: center; gap: 0.25rem;
+            padding: 4px 8px; border-radius: 6px; font-size: 0.875rem; font-weight: 500;
+            cursor: pointer; transition: all 0.2s ease-in-out;
+            background-color: #f3f4f6; color: #4b5563;
+        }
+        .status-btn-group input[type="radio"]:checked + .status-btn.present { background-color: #d1fae5; color: #065f46; }
+        .status-btn-group input[type="radio"]:checked + .status-btn.absent { background-color: #fee2e2; color: #991b1b; }
+        .status-btn-group input[type="radio"]:checked + .status-btn.late { background-color: #fef3c7; color: #92400e; }
+
+        #student-details-modal { transition: opacity 0.3s ease-in-out; }
+
+        .filter-card { transition: all 0.3s ease; }
+        .filter-card.active { box-shadow: 0 0 0 2px #4A72FF; background-color: #eff6ff; }
+        .chevron-icon { transition: transform 0.3s ease; }
+        .filter-card.active .chevron-icon { transform: rotate(180deg); }
+        .filter-dropdown {
+            max-height: 0; overflow: hidden; opacity: 0;
+            transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+        }
+        .filter-dropdown.open { max-height: 200px; opacity: 1; }
+        
+        #student-list tr:nth-child(even) { background-color: #f9fafb; }
+        #student-list tr:hover { background-color: #f3f4f6; }
+
+        #toast-notification.show { opacity: 1; transform: translate(-50%, 0); }
+        #toast-notification.success { background-color: #22c55e; }
+        #toast-notification.error { background-color: #ef4444; }
+
+        /* --- Dashboard Specific Styles --- */
+        .test-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-in-out;
+        }
+        .test-header.active .chevron-icon {
+            transform: rotate(180deg);
+        }
+        .todo-item.completed span {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+        }
+        .todo-item input[type="checkbox"] {
+            accent-color: var(--accent-primary);
+        }
+        /* Style for Assignments/Exams progress badges */
+        .badge-passed { @apply bg-green-100 text-green-700 font-semibold; }
+        .badge-failed { @apply bg-red-100 text-red-700 font-semibold; }
+        .badge-pending { @apply bg-yellow-100 text-yellow-700 font-semibold; }
+        .badge-late { @apply bg-orange-100 text-orange-700 font-semibold; }
+
+        /* --- Chat Specific Styles (NEW) --- */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 90px - 5rem); /* Full height minus header and page padding */
+            background-color: var(--bg-content);
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+        .chat-messages {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            background-color: var(--bg-main);
+        }
+        .message-bubble {
+            max-width: 80%;
+            padding: 0.75rem 1rem;
+            border-radius: 1.25rem;
+            margin-bottom: 0.75rem;
+            word-wrap: break-word;
+        }
+        .message-bubble.self {
+            margin-left: auto;
+            background-color: var(--accent-primary);
+            color: white;
+            border-bottom-right-radius: 0.25rem;
+        }
+        .message-bubble.other {
+            margin-right: auto;
+            background-color: var(--accent-primary-light);
+            color: var(--text-primary);
+            border-bottom-left-radius: 0.25rem;
+        }
+        .message-header {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+        .message-bubble.self .message-header {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .message-input-area {
+            padding: 1rem;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--bg-content);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- START: SIDEBAR -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="user-switch-wrapper">
+                    <svg class="logo-icon" width="32" height="32" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                    <div class="logo-details">
+                        <span class="logo-name">Alex Johnson</span>
+                        <span class="logo-subtext">student</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-down user-switch-arrow"></i>
+                </div>
+                <div class="user-switcher-menu">
+                    <div class="switcher-item" data-name="Alex Johnson" data-role="student"> <i class="fa-solid fa-user-graduate"></i> <span>Student</span> </div>
+                    <div class="switcher-item" data-name="Prof. Anderson" data-role="teacher"> <i class="fa-solid fa-user-tie"></i> <span>Teacher</span> </div>
+                </div>
+            </div>
+
+            <div class="sidebar-menu">
+                <div class="menu-section">
+                    <span class="menu-title">Menu</span>
+                    <ul class="nav-links">
+                        <li><a href="#dashboard-page" data-page="dashboard-page" class="nav-link"><i class="fa-solid fa-table-cells-large"></i> <span>Dashboard</span></a></li>
+                        <li class="has-submenu" data-page-group="attendance">
+                            <a class="nav-link dropdown-toggle">
+                                <span><i class="fa-solid fa-user-check"></i> <span>Attendance</span></span>
+                                <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                            </a>
+                            <ul class="submenu">
+                                <li><a href="#mark-attendance-page" data-page="mark-attendance-page"><span>Mark Attendance</span></a></li>
+                                <li><a href="#attendance-page" data-page="attendance-page"><span>Attendance Log</span></a></li>
+                            </ul>
+                        </li>
+                        <li><a href="#timetable-page" data-page="timetable-page" class="nav-link"><i class="fa-solid fa-calendar-days"></i> <span>Timetable</span></a></li>
+                        <li class="has-submenu" data-page-group="chats">
+                            <a class="nav-link dropdown-toggle">
+                                <span><i class="fa-solid fa-comments"></i> <span>Group Chats</span></span>
+                                <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                            </a>
+                            <ul class="submenu">
+                                <!-- Chat items updated to use data-group for dynamic navigation -->
+                                <li><a href="#group-chat-page" data-page="group-chat-page" data-group="Project Phoenix"><img src="https://i.pravatar.cc/150?u=group1" alt="Logo"><span>Project Phoenix</span><span class="notification-badge">3</span></a></li>
+                                <li><a href="#group-chat-page" data-page="group-chat-page" data-group="Calculus Study Group"><img src="https://i.pravatar.cc/150?u=group2" alt="Logo"><span>Calculus Study Group</span><span class="notification-badge">1</span></a></li>
+                                <li><a href="#group-chat-page" data-page="group-chat-page" data-group="CS Dept. Announcements"><img src="https://i.pravatar.cc/150?u=group3" alt="Logo"><span>CS Dept. Announcements</span></a></li>
+                                <li><a href="#group-chat-page" data-page="group-chat-page" data-group="Hackathon Team"><img src="https://i.pravatar.cc/150?u=group4" alt="Logo"><span>Hackathon Team</span><span class="notification-badge">7</span></a></li>
+                                <li><a href="#group-chat-page" data-page="group-chat-page" data-group="Senior Design Project"><img src="https://i.pravatar.cc/150?u=group5" alt="Logo"><span>Senior Design Project</span></a></li>
+                            </ul>
+                        </li>
+                        <li><a href="#exams-page" data-page="exams-page" class="nav-link"><i class="fa-solid fa-file-pen"></i> <span>Exams / Results</span></a></li>
+                    </ul>
+                </div>
+                <div class="menu-section">
+                    <span class="menu-title">Insights</span>
+                    <ul class="nav-links">
+                        <li><a href="#ai-assistant-page" data-page="ai-assistant-page" class="nav-link"><i class="fa-solid fa-robot"></i> <span>AI Assistant</span></a></li>
+                        <li><a href="#notes-page" data-page="notes-page" class="nav-link"><i class="fa-solid fa-note-sticky"></i> <span>Notes</span></a></li>
+                        <li><a href="#assignments-page" data-page="assignments-page" class="nav-link"><i class="fa-solid fa-list-check"></i> <span>Assignments</span></a></li>
+                        <li><a href="#help-page" data-page="help-page" class="nav-link"><i class="fa-solid fa-circle-question"></i> <span>Help</span></a></li>
+                        <li><a href="#settings-page" data-page="settings-page" class="nav-link"><i class="fa-solid fa-cog"></i> <span>Settings</span></a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="theme-switcher-container">
+                    <span>Dark/Light</span>
+                    <div class="theme-switch">
+                        <div class="switch-thumb"></div>
+                        <i class="fa-solid fa-moon"></i>
+                        <i class="fa-solid fa-sun"></i>
+                    </div>
+                </div>
+                <div class="user-profile">
+                    <img src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="User Avatar">
+                    <div class="user-details">
+                        <span class="user-name">Alex Johnson</span>
+                        <span class="user-email">alex.j@school.edu</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        <!-- END: SIDEBAR -->
+        
+        <main class="main-content">
+            <!-- START: HEADER -->
+            <header>
+                <div class="header-left-cluster">
+                    <div class="sidebar-toggle">
+                        <i class="fa-solid fa-bars"></i>
+                    </div>
+                    <div class="search">
+                        <div class="bar"> <div class="icon"><i></i></div> </div>
+                        <form><input type="text" placeholder="Search...."></form>
+                        <div class="close"></div>
+                        <ul>
+                            <!-- Content determined by JS based on active page -->
+                        </ul>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <div class="profile">
+                        <img src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Profile Picture">
+                        <span>Alex Johnson</span>
+                    </div>
+                </div>
+            </header>
+            <!-- END: HEADER -->
+            
+            <div class="pages">
+                <!-- START: DASHBOARD PAGE (NEW CONTENT) -->
+                <section id="dashboard-page" class="page">
+                    <div class="max-w-7xl mx-auto space-y-8">
+                        
+                        <!-- 1. Greeting and Date/Time -->
+                        <div class="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 sm:p-8 rounded-2xl text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center">
+                            <div>
+                                <h1 class="text-3xl font-bold">Welcome back, Alex Johnson!</h1>
+                                <p id="current-date-time" class="text-blue-200 font-medium mt-1 text-sm sm:text-lg">Loading...</p>
+                            </div>
+                            <div class="mt-4 md:mt-0">
+                                <i data-lucide="sun" class="w-10 h-10 text-yellow-300"></i>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                             <!-- 3. Overall Stats -->
+                            <div class="lg:col-span-1 space-y-6">
+                                <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100 hover:shadow-lg transition">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-lg font-semibold text-gray-700">Overall CGPA</h3>
+                                        <i data-lucide="trophy" class="w-6 h-6 text-yellow-500"></i>
+                                    </div>
+                                    <p id="cgpa-value" class="text-5xl font-extrabold text-blue-600 mt-2">3.85</p>
+                                    <p class="text-sm text-gray-500 mt-1">Goal: 4.0 | Term 4 Average</p>
+                                </div>
+                                <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100 hover:shadow-lg transition">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-lg font-semibold text-gray-700">Overall Attendance</h3>
+                                        <i data-lucide="percent" class="w-6 h-6 text-green-500"></i>
+                                    </div>
+                                    <p id="attendance-value" class="text-5xl font-extrabold text-green-600 mt-2">92.5%</p>
+                                    <p class="text-sm text-gray-500 mt-1">Goal: 90% | YTD Classes</p>
+                                </div>
+                                 <!-- 6. Subjects and Teachers -->
+                                <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+                                    <h3 class="text-xl font-semibold mb-4 text-gray-700">My Subjects</h3>
+                                    <div id="subjects-list" class="space-y-4">
+                                        <!-- Subject cards injected here -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 2. Performance Graph -->
+                            <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-md border border-gray-100 hover:shadow-lg transition">
+                                <h3 class="text-xl font-semibold mb-4 text-gray-700">Previous Performance (Last 7 Assessments)</h3>
+                                <div class="h-64">
+                                    <canvas id="performanceChart"></canvas>
+                                </div>
+                                <p class="text-xs text-gray-400 mt-4 text-center">Scores reflect percentage marks achieved.</p>
+                            </div>
+                        </div>
+                        
+                        <!-- 5. Upcoming Tests (Collapsible) -->
+                        <section class="bg-white p-6 rounded-2xl shadow-xl border border-gray-100">
+                            <h2 class="text-xl font-bold text-gray-700 mb-4 flex items-center gap-2">
+                                <i data-lucide="file-text" class="w-5 h-5 text-red-500"></i>
+                                Upcoming Tests & Exams
+                            </h2>
+                            <div id="upcoming-tests-container" class="space-y-3">
+                                <!-- Test elements injected here -->
+                            </div>
+                        </section>
+                        
+                        <!-- 7. To Do List and 8. Quote -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6">
+                            <!-- To Do List -->
+                            <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+                                <h3 class="text-xl font-semibold mb-4 text-gray-700 flex items-center gap-2">
+                                    <i data-lucide="list-checks" class="w-5 h-5 text-purple-600"></i>
+                                    My To-Do List
+                                </h3>
+                                <div class="flex gap-2 mb-4">
+                                    <input type="text" id="todo-input" placeholder="Add a new task..." class="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500">
+                                    <button id="add-todo-btn" class="bg-purple-600 text-white p-2 rounded-lg hover:bg-purple-700 active:scale-95 transition">Add</button>
+                                </div>
+                                <ul id="todo-list" class="space-y-2 max-h-60 overflow-y-auto">
+                                    <!-- To-Do items injected here -->
+                                </ul>
+                            </div>
+                            
+                            <!-- Motivational Quote -->
+                            <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100 flex items-center justify-center text-center">
+                                <div>
+                                    <p id="motivational-quote" class="text-xl italic text-gray-600 font-medium">
+                                        "The future belongs to those who believe in the beauty of their dreams."
+                                    </p>
+                                    <p class="text-sm text-gray-400 mt-3">- Eleanor Roosevelt</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </section>
+                <!-- END: DASHBOARD PAGE -->
+
+                <!-- START: GROUP CHAT PAGE (NEW CONTENT) -->
+                <section id="group-chat-page" class="page">
+                    <div id="chat-page-content" class="chat-container">
+                        <div class="flex justify-between items-center p-4 bg-white border-b border-gray-200">
+                            <h2 class="text-xl font-bold text-gray-800" id="chat-group-title"></h2>
+                            <div class="flex items-center gap-4">
+                                <span class="text-sm text-gray-500 flex items-center gap-1">
+                                    <i data-lucide="users" class="w-4 h-4"></i>
+                                    <span id="chat-member-count">4 Members</span>
+                                </span>
+                                <button class="text-gray-500 hover:text-red-500" title="Leave Group">
+                                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chat-messages" id="chat-messages">
+                            <!-- Messages will be injected here -->
+                        </div>
+                        <div class="message-input-area flex gap-3">
+                            <input type="text" id="chat-input" placeholder="Type your message..." 
+                                class="flex-1 p-3 border border-gray-300 rounded-xl focus:ring-portal-blue focus:border-portal-blue shadow-inner"
+                            >
+                            <button id="send-chat-btn" class="bg-portal-blue text-white p-3 rounded-xl hover:bg-blue-600 active:scale-95 transition">
+                                <i data-lucide="send" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+                <!-- END: GROUP CHAT PAGE -->
+
+                <!-- START: ATTENDANCE LOG PAGE (from try2.html) -->
+                <section id="attendance-page" class="page">
+                    <div class="max-w-7xl mx-auto">
+                        <div class="page-header mb-8">
+                            <h1 class="text-3xl font-bold text-slate-800">Attendance Dashboard</h1>
+                            <p class="text-md text-slate-500">Track class attendance and manage daily records.</p>
+                        </div>
+                        
+                        <section>
+                            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                                <div class="lg:col-span-2 bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-md hover:shadow-lg transition">
+                                    <h3 class="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg>
+                                        Today's Attendance
+                                    </h3>
+                                    <div class="flex items-baseline mb-1">
+                                        <span class="text-4xl font-bold text-slate-900">89.2%</span>
+                                        <span class="text-sm font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded-full ml-2">2.8%</span>
+                                    </div>
+                                    <p class="text-sm text-slate-500 mb-4">Attendance Rate</p>
+                                    
+                                    <div id="attendance-bar-chart" class="flex w-full h-16 gap-px items-end"></div>
+
+                                    <div class="mt-4 grid grid-cols-3 gap-4 text-center">
+                                        <div>
+                                            <div class="flex items-center justify-center gap-2 text-sm text-slate-600">
+                                                <span class="w-3 h-3 rounded-full bg-blue-500"></span> On-Time
+                                            </div>
+                                            <p class="font-bold text-lg mt-1">86%</p>
+                                        </div>
+                                        <div>
+                                            <div class="flex items-center justify-center gap-2 text-sm text-slate-600">
+                                                <span class="w-3 h-3 rounded-full bg-orange-400"></span> Late
+                                            </div>
+                                            <p class="font-bold text-lg mt-1">12%</p>
+                                        </div>
+                                        <div>
+                                            <div class="flex items-center justify-center gap-2 text-sm text-slate-600">
+                                                <span class="w-3 h-3 rounded-full bg-slate-200"></span> Not Attend Yet
+                                            </div>
+                                            <p class="font-bold text-lg mt-1">2%</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-6">
+                                    <div class="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-md hover:shadow-lg transition flex flex-col hover:-translate-y-1">
+                                        <h3 class="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"> <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804V12a1 1 0 11-2 0V4.804z" /> </svg>
+                                            Total Classes Attended
+                                        </h3>
+                                        <div class="my-auto">
+                                            <span class="text-3xl font-bold text-slate-900">1261</span>
+                                            <span class="text-slate-400">/1,298</span>
+                                        </div>
+                                        <div class="text-sm flex justify-between items-center mt-2">
+                                            <span class="text-slate-500">Last Week</span>
+                                            <span class="font-medium text-green-600 flex items-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                                                +2.8%
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-md hover:shadow-lg transition flex flex-col hover:-translate-y-1">
+                                        <h3 class="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.415L11 9.586V6z" clip-rule="evenodd" /></svg>
+                                            Total Log Hours
+                                        </h3>
+                                        <div class="my-auto">
+                                            <span class="text-3xl font-bold text-slate-900">234:12:23</span>
+                                            <span class="text-slate-400">/300:00:00</span>
+                                        </div>
+                                        <div class="text-sm flex justify-between items-center mt-2">
+                                            <span class="text-slate-500">Last Week</span>
+                                            <span class="font-medium text-red-600 flex items-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17l5-5m0 0l-5-5m5 5H6" /></svg>
+                                                -0.5%
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-md hover:shadow-lg transition">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h3 class="font-semibold text-md text-slate-800">September 2023</h3>
+                                        <div class="flex items-center gap-1">
+                                            <button class="p-1 rounded-md hover:bg-slate-100 text-slate-500">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                                            </button>
+                                            <button class="p-1 rounded-md hover:bg-slate-100 text-slate-500">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-7 gap-1 text-center text-xs font-medium text-slate-500 mb-2">
+                                        <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span>
+                                    </div>
+                                    <div class="grid grid-cols-7 gap-1 text-sm">
+                                        <div class="calendar-day text-slate-400 rounded-lg">28</div>
+                                        <div class="calendar-day text-slate-400 rounded-lg">29</div>
+                                        <div class="calendar-day text-slate-400 rounded-lg">30</div>
+                                        <div class="calendar-day text-slate-400 rounded-lg">31</div>
+                                        <div class="calendar-day rounded-lg">1</div>
+                                        <div class="calendar-day rounded-lg">2</div>
+                                        <div class="calendar-day rounded-lg">3</div>
+                                        <div class="calendar-day flex-col rounded-lg" title="Present"><span class="mb-1">4</span><span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span></div>
+                                        <div class="calendar-day flex-col rounded-lg" title="Present"><span class="mb-1">5</span><span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span></div>
+                                        <div class="calendar-day flex-col rounded-lg" title="Absent"><span class="mb-1">6</span><span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span></div>
+                                        <div class="calendar-day rounded-lg">7</div>
+                                        <div class="calendar-day flex-col rounded-lg" title="Late"><span class="mb-1">8</span><span class="w-1.5 h-1.5 bg-orange-400 rounded-full"></span></div>
+                                        <div class="calendar-day border-2 border-blue-400 bg-blue-50 text-blue-700 font-semibold rounded-lg">9</div>
+                                        <div class="calendar-day rounded-lg">10</div>
+                                        <div class="calendar-day flex-col rounded-lg" title="Present"><span class="mb-1">11</span><span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span></div>
+                                        <div class="calendar-day flex-col rounded-lg" title="Absent"><span class="mb-1">12</span><span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span></div>
+                                        <div class="calendar-day rounded-lg">13</div>
+                                        <div class="calendar-day rounded-lg">14</div>
+                                        <div class="calendar-day rounded-lg">15</div>
+                                        <div class="calendar-day rounded-lg">16</div>
+                                        <div class="calendar-day rounded-lg">17</div>
+                                        <div class="calendar-day rounded-lg">18</div>
+                                        <div class="calendar-day flex-col rounded-lg" title="Present"><span class="mb-1">19</span><span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span></div>
+                                        <div class="calendar-day flex-col rounded-lg" title="Present"><span class="mb-1">20</span><span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span></div>
+                                        <div class="calendar-day flex-col rounded-lg" title="Present"><span class="mb-1">21</span><span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span></div>
+                                        <div class="calendar-day rounded-lg">22</div>
+                                        <div class="calendar-day rounded-lg">23</div>
+                                        <div class="calendar-day rounded-lg">24</div>
+                                        <div class="calendar-day rounded-lg">25</div>
+                                        <div class="calendar-day flex-col rounded-lg" title="Absent"><span class="mb-1">26</span><span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span></div>
+                                        <div class="calendar-day rounded-lg">27</div>
+                                        <div class="calendar-day rounded-lg">28</div>
+                                        <div class="calendar-day rounded-lg">29</div>
+                                        <div class="calendar-day rounded-lg">30</div>
+                                    </div>
+                                    <div class="flex items-center justify-center gap-4 text-xs mt-4 border-t pt-3 border-slate-100">
+                                        <span class="flex items-center gap-1.5"><div class="w-2 h-2 bg-green-500 rounded-full"></div> Present</span>
+                                        <span class="flex items-center gap-1.5"><div class="w-2 h-2 bg-red-500 rounded-full"></div> Absent</span>
+                                        <span class="flex items-center gap-1.5"><div class="w-2 h-2 bg-orange-400 rounded-full"></div> Late</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <hr class="my-8 border-slate-200">
+
+                        <section>
+                            <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+                                <div>
+                                    <p class="text-sm text-slate-500 mb-1">
+                                        <a href="#" class="hover:underline">Classes</a> > Attendance history
+                                    </p>
+                                    <h2 class="text-xl font-semibold text-slate-800">Attendance history</h2>
+                                    <p class="text-sm text-slate-500 italic">* Today Wed, Sep 2, 2023</p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <select class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                    <option>All</option>
+                                    <option>On Time</option>
+                                    <option>Late</option>
+                                    <option>Absent</option>
+                                    </select>
+                                    <div class="flex items-center gap-2 text-sm font-medium bg-white border border-slate-200 rounded-lg p-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" /></svg>
+                                        <span>Aug 13 - 26, 2023</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-md mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                <div class="flex items-center gap-4">
+                                    <img src="https://placehold.co/100x100/E2E8F0/475569?text=AM" alt="Advanced Mathematics" class="w-14 h-14 rounded-full">
+                                    <div>
+                                        <h3 class="font-bold text-lg text-slate-800">Advanced Mathematics</h3>
+                                        <p class="text-sm text-slate-500">Course Code: MATH-301</p>
+                                        <p class="text-sm text-slate-400">prof.smith@university.edu</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button class="p-2.5 rounded-full border border-slate-300 bg-white text-slate-600 hover:bg-slate-50">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" /></svg>
+                                    </button>
+                                    <button class="p-2.5 rounded-full border border-slate-300 bg-white text-slate-600 hover:bg-slate-50">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clip-rule="evenodd" /></svg>
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2 w-full sm:w-auto mt-4 sm:mt-0">
+                                    <div class="text-sm text-slate-500">Classes Attended</div><div class="font-semibold text-slate-800 text-right sm:text-left">11 classes</div>
+                                    <div class="text-sm text-slate-500">Total hours</div><div class="font-semibold text-slate-800 text-right sm:text-left">87 hours</div>
+                                    <div class="text-sm text-slate-500">Avg check in</div><div class="font-semibold text-slate-800 text-right sm:text-left">9:30 AM</div>
+                                    <div class="text-sm text-slate-500">Avg check out</div><div class="font-semibold text-slate-800 text-right sm:text-left">5:00 PM</div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3 transition-transform hover:-translate-y-1 hover:shadow-lg duration-200">
+                                    <div class="flex justify-between items-center">
+                                        <h4 class="font-semibold text-slate-700">Wed, Aug 13, 2021</h4>
+                                        <span class="text-xs font-medium text-green-800 bg-green-100 px-2 py-1 rounded-full">✔ On time</span>
+                                    </div>
+                                    <div class="grid grid-cols-3 text-center border-t border-b border-slate-100 py-3">
+                                        <div><p class="text-xs text-slate-500">Check In</p><p class="font-bold text-lg">9:00 AM</p></div>
+                                        <div><p class="text-xs text-slate-500">Check Out</p><p class="font-bold text-lg">5:00 PM</p></div>
+                                        <div><p class="text-xs text-slate-500">Total</p><p class="font-bold text-lg">8hr</p></div>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-slate-500 mb-1">Notes:</p>
+                                        <p class="text-sm text-slate-700">Completed all assignments.</p>
+                                    </div>
+                                </div>
+                                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3 transition-transform hover:-translate-y-1 hover:shadow-lg duration-200">
+                                    <div class="flex justify-between items-center">
+                                        <h4 class="font-semibold text-slate-700">Thu, Aug 14, 2021</h4>
+                                        <span class="text-xs font-medium text-green-800 bg-green-100 px-2 py-1 rounded-full">✔ On time</span>
+                                    </div>
+                                    <div class="grid grid-cols-3 text-center border-t border-b border-slate-100 py-3">
+                                        <div><p class="text-xs text-slate-500">Check In</p><p class="font-bold text-lg">9:00 AM</p></div>
+                                        <div><p class="text-xs text-slate-500">Check Out</p><p class="font-bold text-lg">5:00 PM</p></div>
+                                        <div><p class="text-xs text-slate-500">Total</p><p class="font-bold text-lg">8hr</p></div>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-slate-500 mb-1">Notes:</p>
+                                        <p class="text-sm text-slate-700">Group project discussion.</p>
+                                    </div>
+                                </div>
+                                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3 transition-transform hover:-translate-y-1 hover:shadow-lg duration-200">
+                                    <div class="flex justify-between items-center">
+                                        <h4 class="font-semibold text-slate-700">Fri, Aug 15, 2021</h4>
+                                        <span class="text-xs font-medium text-red-800 bg-red-100 px-2 py-1 rounded-full">✘ Absent</span>
+                                    </div>
+                                    <div class="grid grid-cols-3 text-center border-t border-b border-slate-100 py-3">
+                                        <div><p class="text-xs text-slate-500">Check In</p><p class="font-bold text-lg">-</p></div>
+                                        <div><p class="text-xs text-slate-500">Check Out</p><p class="font-bold text-lg">-</p></div>
+                                        <div><p class="text-xs text-slate-500">Total</p><p class="font-bold text-lg">0hr</p></div>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-slate-500 mb-1">Notes:</p>
+                                        <p class="text-sm text-slate-700">Sick leave.</p>
+                                    </div>
+                                </div>
+                                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3 transition-transform hover:-translate-y-1 hover:shadow-lg duration-200">
+                                    <div class="flex justify-between items-center">
+                                        <h4 class="font-semibold text-slate-700">Sat, Aug 16, 2021</h4>
+                                        <span class="text-xs font-medium text-purple-800 bg-purple-100 px-2 py-1 rounded-full">★ Holiday</span>
+                                    </div>
+                                    <div class="grid grid-cols-3 text-center border-t border-b border-slate-100 py-3">
+                                        <div><p class="text-xs text-slate-500">Check In</p><p class="font-bold text-lg">-</p></div>
+                                        <div><p class="text-xs text-slate-500">Check Out</p><p class="font-bold text-lg">-</p></div>
+                                        <div><p class="text-xs text-slate-500">Total</p><p class="font-bold text-lg">0hr</p></div>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-slate-500 mb-1">Notes:</p>
+                                        <p class="text-sm text-slate-700">No classes scheduled.</p>
+                                    </div>
+                                </div>
+                                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3 transition-transform hover:-translate-y-1 hover:shadow-lg duration-200">
+                                    <div class="flex justify-between items-center">
+                                        <h4 class="font-semibold text-slate-700">Sun, Aug 17, 2021</h4>
+                                        <span class="text-xs font-medium text-orange-800 bg-orange-100 px-2 py-1 rounded-full">⏱ Late</span>
+                                    </div>
+                                    <div class="grid grid-cols-3 text-center border-t border-b border-slate-100 py-3">
+                                        <div><p class="text-xs text-slate-500">Check In</p><p class="font-bold text-lg">9:15 AM</p></div>
+                                        <div><p class="text-xs text-slate-500">Check Out</p><p class="font-bold text-lg">5:00 PM</p></div>
+                                        <div><p class="text-xs text-slate-500">Total</p><p class="font-bold text-lg">7hr</p></div>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-slate-500 mb-1">Notes:</p>
+                                        <p class="text-sm text-slate-700">Traffic was very heavy.</p>
+                                    </div>
+                                </div>
+                                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3 transition-transform hover:-translate-y-1 hover:shadow-lg duration-200">
+                                    <div class="flex justify-between items-center">
+                                        <h4 class="font-semibold text-slate-700">Mon, Aug 18, 2021</h4>
+                                        <span class="text-xs font-medium text-green-800 bg-green-100 px-2 py-1 rounded-full">✔ On time</span>
+                                    </div>
+                                    <div class="grid grid-cols-3 text-center border-t border-b border-slate-100 py-3">
+                                        <div><p class="text-xs text-slate-500">Check In</p><p class="font-bold text-lg">9:00 AM</p></div>
+                                        <div><p class="text-xs text-slate-500">Check Out</p><p class="font-bold text-lg">5:00 PM</p></div>
+                                        <div><p class="text-xs text-slate-500">Total</p><p class="font-bold text-lg">8hr</p></div>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-slate-500 mb-1">Notes:</p>
+                                        <p class="text-sm text-slate-700">New chapter started.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                    </div>
+                </section>
+                <!-- END: ATTENDANCE LOG PAGE -->
+                
+                <!-- START: MARK ATTENDANCE PAGE (from try2.html) -->
+                <section id="mark-attendance-page" class="page">
+                    <div class="flex-1 p-6 overflow-y-auto custom-scrollbar text-gray-800">
+                        <h2 class="text-2xl font-semibold mb-4">Mark Attendance</h2>
+                        
+                        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                            <div class="xl-col-span-1 bg-portal-gray p-4 rounded-lg">
+                                <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                    <h3 class="font-semibold mb-3">Lecture Hall View</h3>
+                                    <div id="lecture-hall" class="w-full shadow-inner overflow-hidden">
+                                        <div class="w-2/3 h-8 bg-gray-200 mx-auto rounded-md flex items-center justify-center text-sm font-semibold text-gray-600">Lecturer's Desk</div>
+                                        
+                                        <div id="teacher-marker" class="gps-signal" title="Teacher GPS"></div>
+
+                                        <div class="flex-grow space-y-6 pt-6" id="lecture-hall-desks">
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 flex justify-center items-center space-x-4 text-xs text-gray-600">
+                                        <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-red-500 mr-1.5"></span>Teacher</span>
+                                        <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-green-500 mr-1.5"></span>Present</span>
+                                        <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-red-500 mr-1.5"></span>Absent</span>
+                                        <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 mr-1.5"></span>Late</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="space-y-3 mt-6" id="filter-container">
+                                    <div class="filter-group">
+                                        <div class="filter-card bg-white p-3 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between cursor-pointer hover:shadow-md">
+                                            <div class="flex items-center">
+                                                <div class="bg-blue-100 p-2 rounded-md mr-3">
+                                                    <i data-lucide="book-open" class="w-5 h-5 text-portal-blue"></i>
+                                                </div>
+                                                <div>
+                                                    <p class="text-xs text-gray-500 font-medium">Course</p>
+                                                    <p class="font-semibold text-sm" data-value="Diploma of Accounting (FNS50217)">Diploma of Accounting (FNS50217)</p>
+                                                </div>
+                                            </div>
+                                            <i data-lucide="chevron-down" class="chevron-icon w-5 h-5 text-gray-400"></i>
+                                        </div>
+                                        <div class="filter-dropdown bg-white rounded-lg shadow-md mt-1 border border-gray-200">
+                                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">Diploma of Accounting (FNS50217)</a>
+                                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">Bachelor of Science</a>
+                                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">Master of Business Administration</a>
+                                        </div>
+                                    </div>
+
+                                     <div class="filter-group">
+                                        <div class="filter-card bg-white p-3 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between cursor-pointer hover:shadow-md">
+                                            <div>
+                                                <p class="text-xs text-gray-500 font-medium">Subject</p>
+                                                <p class="font-semibold text-sm" data-value="Basics of User Research">Basics of User Research</p>
+                                            </div>
+                                            <i data-lucide="chevron-down" class="chevron-icon w-5 h-5 text-gray-400"></i>
+                                        </div>
+                                         <div class="filter-dropdown bg-white rounded-lg shadow-md mt-1 border border-gray-200">
+                                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">Basics of User Research</a>
+                                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">Advanced Calculus</a>
+                                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">Corporate Finance</a>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="filter-group">
+                                        <div class="filter-card bg-white p-3 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between cursor-pointer hover:shadow-md">
+                                            <div>
+                                                <p class="text-xs text-gray-500 font-medium">Semester</p>
+                                                <p class="font-semibold text-sm" data-value="Winter Sem - Term 1">Winter Sem - Term 1</p>
+                                            </div>
+                                            <i data-lucide="chevron-down" class="chevron-icon w-5 h-5 text-gray-400"></i>
+                                        </div>
+                                        <div class="filter-dropdown bg-white rounded-lg shadow-md mt-1 border border-gray-200">
+                                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">Winter Sem - Term 1</a>
+                                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">Fall Sem - Term 2</a>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="filter-group">
+                                        <div class="filter-card bg-white p-3 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between cursor-pointer hover:shadow-md">
+                                            <div>
+                                                <p class="text-xs text-gray-500 font-medium">Group</p>
+                                                <p class="font-semibold text-sm" data-value="Batch B">Batch B</p>
+                                            </div>
+                                            <i data-lucide="chevron-down" class="chevron-icon w-5 h-5 text-gray-400"></i>
+                                        </div>
+                                        <div class="filter-dropdown bg-white rounded-lg shadow-md mt-1 border border-gray-200">
+                                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">Batch A</a>
+                                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">Batch B</a>
+                                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">Batch C</a>
+                                        </div>
+                                    </div>
+                                    <button id="clear-filters-btn" class="w-full mt-2 text-sm text-portal-blue font-semibold hover:underline focus:outline-none">Clear filters</button>
+                                </div>
+                            </div>
+
+                            <div class="xl:col-span-2 bg-white p-6 rounded-lg border border-gray-200">
+                                <div class="flex flex-wrap justify-between items-center pb-4 mb-4 gap-4">
+                                    <div class="flex items-center gap-4">
+                                        <a href="#attendance-page" data-page="attendance-page" class="text-gray-600 hover:text-gray-900 page-switch-link"><i data-lucide="arrow-left" class="w-6 h-6"></i></a>
+                                        <h3 class="text-lg font-semibold">Mark Attendance</h3>
+                                    </div>
+                                    <div class="flex items-center gap-4 text-sm">
+                                       <span class="text-gray-500">Course: Diploma of Accounting (FNS50217)</span>
+                                       <button class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md font-semibold text-sm flex items-center gap-2 hover:bg-gray-50"><i data-lucide="download" class="w-4 h-4"></i>Download Esl</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="border rounded-lg p-4 flex flex-wrap justify-between items-center gap-4">
+                                    <div>
+                                        <p class="font-semibold">Subject: Basics of User Research (BB5012)</p>
+                                        <p class="text-sm text-gray-500">Class C4, Batch B</p>
+                                    </div>
+                                     <div>
+                                        <p class="font-semibold">Time- 10:00 AM To 10:45 AM</p>
+                                        <p class="text-sm text-gray-500">Week 3 - Tuesday - 17 Jan 2020</p>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <span class="inline-block bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-1 rounded-full align-middle">Pending</span>
+                                        <div id="location-status-container"></div>
+                                        <button id="save-attendance-btn" class="bg-portal-blue text-white px-6 py-2 rounded-md font-semibold text-sm hover:bg-blue-600">Save Attendance</button>
+                                    </div>
+                                </div>
+
+                                <div class="overflow-x-auto custom-scrollbar mt-4">
+                                    <table class="w-full text-left text-sm">
+                                        <thead>
+                                            <tr class="border-b-2 border-gray-200">
+                                                <th class="p-2 font-semibold text-gray-600">Student ID</th>
+                                                <th class="p-2 font-semibold text-gray-600">Student Name</th>
+                                                <th class="p-2 font-semibold text-gray-600 text-center">Status</th>
+                                                <th class="p-2 font-semibold text-gray-600">Total Hours</th>
+                                                <th class="p-2 font-semibold text-gray-600">Status</th>
+                                                <th class="p-2 font-semibold text-gray-600"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="student-list">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <!-- END: MARK ATTENDANCE PAGE -->
+
+                <!-- START: TIMETABLE PAGE (from timetable.html) -->
+                <section id="timetable-page" class="page">
+                    <div class="page-header mb-6">
+                        <h1 class="text-2xl font-bold text-gray-800">Student Timetable</h1>
+                    </div>
+                    
+                    <div class="flex flex-col lg:flex-row gap-8 max-w-screen-2xl mx-auto">
+                        <!-- Main Content -->
+                        <div class="flex-1">
+                             <!-- Hidden Class Info Card -->
+                            <section id="class-details-card" class="bg-white rounded-2xl shadow-sm overflow-hidden">
+                                <div class="flex flex-col md:flex-row">
+                                    <div class="bg-blue-600 text-white p-6 rounded-t-2xl md:rounded-l-2xl md:rounded-t-none md:w-1/3 flex flex-col items-center text-center relative">
+                                        <button id="close-details-btn" class="absolute top-2 right-3 text-white/70 hover:text-white text-3xl font-bold leading-none">&times;</button>
+                                        <img id="teacher-avatar" src="https://placehold.co/80x80/E0E7FF/4F46E5?text=AV" alt="Teacher" class="w-20 h-20 rounded-full border-4 border-white/50 mb-4">
+                                        <h2 id="teacher-name" class="text-xl font-bold">Dr. Evelyn Reed</h2>
+                                        <p id="teacher-department" class="text-blue-200 text-sm">Computer Science Dept.</p>
+                                    </div>
+                                    <div class="p-6 flex-1">
+                                        <h3 id="class-name" class="text-xl font-bold text-gray-800 mb-4">Class Details</h3>
+                                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-4 text-sm">
+                                            <div>
+                                                <p class="text-gray-500">Course Code</p>
+                                                <p id="course-code" class="font-semibold text-gray-800">CS101</p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-500">Room</p>
+                                                <p id="class-room" class="font-semibold text-gray-800">B-103</p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-500">Credits</p>
+                                                <p id="class-credits" class="font-semibold text-gray-800">3</p>
+                                            </div>
+                                            <div class="col-span-2 sm:col-span-3">
+                                                <p class="text-gray-500">Description</p>
+                                                <p id="class-description" class="font-semibold text-gray-800">An introductory course to fundamental data structures and algorithms.</p>
+                                            </div>
+                                        </div>
+                                        <div class="mt-6 flex items-center gap-4">
+                                            <button class="flex-1 text-sm bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-600 active:bg-red-700 active:scale-95 transform transition-all duration-150">
+                                                Request to Cancel
+                                            </button>
+                                            <button class="flex-1 text-sm bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-300 active:bg-gray-400 active:scale-95 transform transition-all duration-150">
+                                                Shift Class
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <!-- Schedule -->
+                            <section class="bg-white p-6 rounded-2xl shadow-sm">
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm text-center border-collapse">
+                                        <thead>
+                                            <tr class="border-b">
+                                                <th class="p-3 font-medium text-gray-500"></th>
+                                                <th class="p-3 font-medium text-blue-600 border-b-2 border-blue-600">Monday</th>
+                                                <th class="p-3 font-medium text-blue-600">Tuesday</th>
+                                                <th class="p-3 font-medium text-blue-600">Wednesday</th>
+                                                <th class="p-3 font-medium text-blue-600">Thursday</th>
+                                                <th class="p-3 font-medium text-blue-600">Friday</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="timetable-body">
+                                            <tr class="border-b">
+                                                <td class="p-3 font-medium text-gray-600 border-r">09.00 - 10.30 WIB</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Mathematic">Mathematic</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Mathematic">Mathematic</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="English">English</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Indonesian">Indonesian</td>
+                                                <td class="p-3 subject-cell" data-subject="History">History</td>
+                                            </tr>
+                                            <tr class="border-b">
+                                                <td class="p-3 font-medium text-gray-600 border-r">10.30 - 11.30 WIB</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Mathematic">Mathematic</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Biology">Biology</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Biology">Biology</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Mathematic">Mathematic</td>
+                                                <td class="p-3 subject-cell" data-subject="Religion">Religion</td>
+                                            </tr>
+                                            <tr class="border-b">
+                                                <td class="p-3 font-medium text-gray-600 border-r">11.30 - 12.00 WIB</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Art and culture">Art and culture</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Indonesian">Indonesian</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Physics">Physics</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Crafts">Crafts</td>
+                                                <td class="p-3 subject-cell" data-subject="Mathematic">Mathematic</td>
+                                            </tr>
+                                            <tr class="border-b">
+                                                <td class="p-3 font-medium text-gray-600 border-r">12.00 - 12.45 WIB</td>
+                                                <td colspan="5" class="p-3 bg-blue-50 text-blue-600 font-semibold">Rest</td>
+                                            </tr>
+                                            <tr class="border-b">
+                                                <td class="p-3 font-medium text-gray-600 border-r">12.45 - 14.30 WIB</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Mathematic">Mathematic</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Indonesian">Indonesian</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Physics">Physics</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Mathematic">Mathematic</td>
+                                                <td class="p-3 subject-cell" data-subject="Mathematic">Mathematic</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="p-3 font-medium text-gray-600 border-r">14.30 - 15.30 WIB</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Mathematic">Mathematic</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Religion">Religion</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Physics">Physics</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Mathematic">Mathematic</td>
+                                                <td class="p-3 subject-cell" data-subject="Art and culture">Art and culture</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section>
+                        </div>
+
+                        <!-- Right Sidebar -->
+                        <aside class="w-full lg:w-80 flex-shrink-0 space-y-6">
+                            <!-- Calendar Widget -->
+                            <div id="calendar-widget" class="bg-white p-4 rounded-2xl shadow-sm">
+                                <div class="flex justify-between items-center mb-4">
+                                    <div class="flex items-center gap-2">
+                                        <button class="bg-blue-500 text-white text-sm font-semibold py-1 px-3 rounded-lg">Today</button>
+                                        <button class="text-gray-600 text-sm font-semibold py-1 px-3 rounded-lg hover:bg-gray-100">Tomorrow</button>
+                                    </div>
+                                    <button class="text-gray-400 text-sm p-1 rounded-md hover:bg-gray-100">&times;</button>
+                                </div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <button id="prev-month" class="p-1 rounded-full hover:bg-gray-100 text-gray-500">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                                    </button>
+                                    <h3 id="month-year" class="font-semibold text-gray-800">May 2021</h3>
+                                    <button id="next-month" class="p-1 rounded-full hover:bg-gray-100 text-gray-500">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                    </button>
+                                </div>
+                                <div id="calendar-grid" class="grid grid-cols-7 text-center text-sm gap-y-2">
+                                    <!-- Calendar will be generated here by JS -->
+                                </div>
+                            </div>
+
+                            <!-- Next Classes List -->
+                            <div class="bg-white p-4 rounded-2xl shadow-sm">
+                                <h3 class="font-bold text-lg text-gray-800 mb-4">Next Classes</h3>
+                                <div class="space-y-4">
+                                    <div class="flex items-center gap-3">
+                                        <img src="https://placehold.co/40x40/C7D2FE/4338CA?text=DS" alt="Class" class="w-10 h-10 rounded-full">
+                                        <div>
+                                            <p class="font-semibold text-sm text-gray-800">Data Structures</p>
+                                            <p class="text-xs text-gray-500">Today, 09:00 - 10:30</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <img src="https://placehold.co/40x40/FECACA/991B1B?text=WD" alt="Class" class="w-10 h-10 rounded-full">
+                                        <div>
+                                            <p class="font-semibold text-sm text-gray-800">Web Development</p>
+                                            <p class="text-xs text-gray-500">Today, 11:00 - 12:30</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <img src="https://placehold.co/40x40/A7F3D0/065F46?text=AL" alt="Class" class="w-10 h-10 rounded-full">
+                                        <div>
+                                            <p class="font-semibold text-sm text-gray-800">Algorithms</p>
+                                            <p class="text-xs text-gray-500">Tomorrow, 10:00 - 11:30</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Request Class -->
+                            <div class="bg-white p-4 rounded-2xl shadow-sm">
+                                <h3 class="font-bold text-lg text-gray-800 mb-2">Request Another Class</h3>
+                                <div class="flex justify-between items-center">
+                                    <div class="flex items-center gap-2">
+                                        <button class="bg-blue-100 text-blue-600 p-2 rounded-lg">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg>
+                                        </button>
+                                        <button class="bg-blue-100 text-blue-600 p-2 rounded-lg">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><line x1="12" x2="12" y1="5" y2="19"></line><line x1="5" x2="19" y1="12" y2="12"></line></svg>
+                                        </button>
+                                    </div>
+                                    <img src="https://placehold.co/120x60/DBEAFE/3B82F6?text=Students" alt="Students illustration" class="h-16">
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+                </section>
+                <!-- END: TIMETABLE PAGE -->
+
+                <!-- START: EXAMS / RESULTS PAGE (Updated Content) -->
+                <section id="exams-page" class="page">
+                    <div class="max-w-7xl mx-auto space-y-8">
+                        <h1 class="text-3xl font-bold text-slate-800">Exams & Results</h1>
+                        <p class="text-md text-slate-500">View your term history and detailed assessment scores.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-white p-6 rounded-xl shadow-md">
+                                <h3 class="text-lg font-semibold text-gray-700 mb-2">Term 4 Summary</h3>
+                                <p class="text-5xl font-extrabold text-yellow-600">3.85</p>
+                                <p class="text-sm text-gray-500 mt-1">GPA | 15 Credits</p>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-md">
+                                <h3 class="text-lg font-semibold text-gray-700 mb-2">Total Passed</h3>
+                                <p class="text-5xl font-extrabold text-green-600">12</p>
+                                <p class="text-sm text-gray-500 mt-1">Courses | Last 2 Terms</p>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-md">
+                                <h3 class="text-lg font-semibold text-gray-700 mb-2">Next Exam</h3>
+                                <p class="text-xl font-bold text-red-600 mt-2">Comp. Networks</p>
+                                <p class="text-sm text-gray-500 mt-1">Dec 5, 2025 | 10:00 AM</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h2 class="text-xl font-bold text-gray-700 mb-4">Detailed Results: Term 4</h2>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full text-left text-sm divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="p-3 font-semibold text-gray-600">Course Name</th>
+                                            <th class="p-3 font-semibold text-gray-600">Grade</th>
+                                            <th class="p-3 font-semibold text-gray-600">Score (%)</th>
+                                            <th class="p-3 font-semibold text-gray-600">Credits</th>
+                                            <th class="p-3 font-semibold text-gray-600">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100">
+                                        <tr>
+                                            <td class="p-3 font-medium">Data Structures (CS201)</td>
+                                            <td class="p-3 text-lg font-bold text-blue-600">A</td>
+                                            <td class="p-3">92.5</td>
+                                            <td class="p-3">4</td>
+                                            <td class="p-3"><span class="px-2 py-0.5 rounded-full text-xs badge-passed">Passed</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-3 font-medium">Web Development (IS310)</td>
+                                            <td class="p-3 text-lg font-bold text-blue-600">A-</td>
+                                            <td class="p-3">89.0</td>
+                                            <td class="p-3">3</td>
+                                            <td class="p-3"><span class="px-2 py-0.5 rounded-full text-xs badge-passed">Passed</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-3 font-medium">Intro to Finance (FIN101)</td>
+                                            <td class="p-3 text-lg font-bold text-orange-600">C+</td>
+                                            <td class="p-3">71.0</td>
+                                            <td class="p-3">3</td>
+                                            <td class="p-3"><span class="px-2 py-0.5 rounded-full text-xs badge-passed">Passed</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-3 font-medium">Algorithms (CS305)</td>
+                                            <td class="p-3 text-lg font-bold text-red-600">F</td>
+                                            <td class="p-3">55.0</td>
+                                            <td class="p-3">4</td>
+                                            <td class="p-3"><span class="px-2 py-0.5 rounded-full text-xs badge-failed">Failed</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <!-- END: EXAMS / RESULTS PAGE -->
+                
+                <!-- START: NOTES PAGE (Updated Content) -->
+                <section id="notes-page" class="page">
+                    <div class="max-w-7xl mx-auto space-y-8">
+                        <h1 class="text-3xl font-bold text-slate-800">Personal Notes & Research</h1>
+                        <p class="text-md text-slate-500">Quickly access and organize your lecture notes and research snippets.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <!-- Note Card 1 -->
+                            <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition cursor-pointer">
+                                <div class="flex justify-between items-center mb-3">
+                                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Algorithms</span>
+                                    <span class="text-xs text-gray-500">Oct 28, 2025</span>
+                                </div>
+                                <h3 class="text-lg font-bold text-gray-800 mb-2">Big O Notation Cheatsheet</h3>
+                                <p class="text-sm text-gray-600 line-clamp-3">
+                                    Memorized complexities for common algorithms: Binary Search $O(\log n)$, Bubble Sort $O(n^2)$, Merge Sort $O(n \log n)$. Need to practice recurrence relations.
+                                </p>
+                                <div class="mt-4 flex justify-between items-center">
+                                    <i data-lucide="folder" class="w-5 h-5 text-gray-400"></i>
+                                    <button class="text-sm font-semibold text-portal-blue hover:underline">View Detail</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Note Card 2 -->
+                            <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition cursor-pointer">
+                                <div class="flex justify-between items-center mb-3">
+                                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Web Dev</span>
+                                    <span class="text-xs text-gray-500">Nov 1, 2025</span>
+                                </div>
+                                <h3 class="text-lg font-bold text-gray-800 mb-2">CSS Grid vs Flexbox Summary</h3>
+                                <p class="text-sm text-gray-600 line-clamp-3">
+                                    **Flexbox:** 1D layout (rows OR columns). Good for aligning items in a straight line. **Grid:** 2D layout (rows AND columns). Best for overall page structure and complex forms.
+                                </p>
+                                <div class="mt-4 flex justify-between items-center">
+                                    <i data-lucide="edit-3" class="w-5 h-5 text-gray-400"></i>
+                                    <button class="text-sm font-semibold text-portal-blue hover:underline">Edit Note</button>
+                                </div>
+                            </div>
+
+                            <!-- Note Card 3 -->
+                            <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition cursor-pointer">
+                                <div class="flex justify-between items-center mb-3">
+                                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">Finance</span>
+                                    <span class="text-xs text-gray-500">Oct 15, 2025</span>
+                                </div>
+                                <h3 class="text-lg font-bold text-gray-800 mb-2">Time Value of Money (TVM)</h3>
+                                <p class="text-sm text-gray-600 line-clamp-3">
+                                    Formula for Future Value: $FV = PV(1 + i)^n$. Key concepts: compounding, discounting, and perpetuity. Must remember the five components (PV, FV, i, n, PMT).
+                                </p>
+                                <div class="mt-4 flex justify-between items-center">
+                                    <i data-lucide="book-open" class="w-5 h-5 text-gray-400"></i>
+                                    <button class="text-sm font-semibold text-portal-blue hover:underline">View Detail</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center pt-4">
+                             <button class="bg-portal-blue text-white px-6 py-3 rounded-full font-semibold text-lg shadow-lg hover:bg-blue-600 transition flex items-center mx-auto gap-2">
+                                <i data-lucide="plus" class="w-5 h-5"></i>
+                                New Note
+                            </button>
+                        </div>
+                    </div>
+                </section>
+                <!-- END: NOTES PAGE -->
+
+                <!-- START: ASSIGNMENTS PAGE (Updated Content) -->
+                <section id="assignments-page" class="page">
+                    <div class="max-w-7xl mx-auto space-y-8">
+                        <h1 class="text-3xl font-bold text-slate-800">Assignments & Project Tracker</h1>
+                        <p class="text-md text-slate-500">Keep track of upcoming deadlines and review submitted work.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
+                            <div class="bg-white p-4 rounded-xl shadow-md">
+                                <p class="text-4xl font-bold text-red-600">1</p>
+                                <p class="text-sm text-gray-500">Due This Week</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl shadow-md">
+                                <p class="text-4xl font-bold text-yellow-600">2</p>
+                                <p class="text-sm text-gray-500">Submitted Late</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl shadow-md">
+                                <p class="text-4xl font-bold text-green-600">15</p>
+                                <p class="text-sm text-gray-500">Completed On Time</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl shadow-md">
+                                <p class="text-4xl font-bold text-gray-600">89%</p>
+                                <p class="text-sm text-gray-500">Average Score</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h2 class="text-xl font-bold text-gray-700 mb-4">Assignment List</h2>
+                            <div class="space-y-4">
+                                <!-- Assignment Item 1: DUE -->
+                                <div class="p-4 border-l-4 border-red-500 bg-red-50 rounded-lg flex justify-between items-center">
+                                    <div>
+                                        <p class="font-bold text-red-700">Web Dev: Final Project Proposal</p>
+                                        <p class="text-sm text-red-500">Due: <span class="font-semibold">Nov 5, 2025</span> | 11:59 PM</p>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded-full text-xs badge-pending">Pending</span>
+                                </div>
+                                <!-- Assignment Item 2: LATE -->
+                                <div class="p-4 border-l-4 border-orange-500 bg-orange-50 rounded-lg flex justify-between items-center">
+                                    <div>
+                                        <p class="font-bold text-orange-700">Data Structures: Linked List Lab</p>
+                                        <p class="text-sm text-orange-500">Submitted: Oct 20, 2025 (Late)</p>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded-full text-xs badge-late">Score: 78%</span>
+                                </div>
+                                <!-- Assignment Item 3: GRADED -->
+                                <div class="p-4 border-l-4 border-green-500 bg-green-50 rounded-lg flex justify-between items-center">
+                                    <div>
+                                        <p class="font-bold text-green-700">Algorithms: Complexity Analysis</p>
+                                        <p class="text-sm text-green-500">Submitted: Oct 1, 2025</p>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded-full text-xs badge-passed">Score: 95%</span>
+                                </div>
+                                <!-- Assignment Item 4: UPCOMING -->
+                                <div class="p-4 border-l-4 border-blue-500 bg-blue-50 rounded-lg flex justify-between items-center">
+                                    <div>
+                                        <p class="font-bold text-blue-700">Intro to Finance: Capital Budgeting</p>
+                                        <p class="text-sm text-blue-500">Due: Dec 15, 2025</p>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded-full text-xs badge-pending">Upcoming</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <!-- END: ASSIGNMENTS PAGE -->
+
+                <!-- START: AI ASSISTANT PAGE (Placeholder) -->
+                <section id="ai-assistant-page" class="page">
+                    <div class="max-w-7xl mx-auto p-6">
+                        <h1 class="text-3xl font-bold text-slate-800">AI Assistant (Placeholder)</h1>
+                        <p class="text-md text-slate-500">Content for the AI Assistant page would go here.</p>
+                    </div>
+                </section>
+                <!-- END: AI ASSISTANT PAGE -->
+                
+                <!-- START: HELP PAGE (Placeholder) -->
+                <section id="help-page" class="page">
+                    <div class="max-w-7xl mx-auto p-6">
+                        <h1 class="text-3xl font-bold text-slate-800">Help (Placeholder)</h1>
+                        <p class="text-md text-slate-500">Content for the Help page would go here.</p>
+                    </div>
+                </section>
+                <!-- END: HELP PAGE -->
+                
+                <!-- START: SETTINGS PAGE (Placeholder) -->
+                <section id="settings-page" class="page">
+                    <div class="max-w-7xl mx-auto p-6">
+                        <h1 class="text-3xl font-bold text-slate-800">Settings (Placeholder)</h1>
+                        <p class="text-md text-slate-500">Content for the Settings page would go here.</p>
+                    </div>
+                </section>
+                <!-- END: SETTINGS PAGE -->
+            </div>
+            
+            <!-- START: MODALS & TOASTS (from try2.html) -->
+            <div id="student-details-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden opacity-0 z-50">
+                <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl transform scale-95 transition-transform duration-300">
+                     <div class="flex justify-between items-center p-4 border-b">
+                        <h3 class="text-lg font-semibold">Student Name: <span id="modal-student-name"></span></h3>
+                        <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800"><i data-lucide="x" class="w-6 h-6"></i></button>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex border-b">
+                            <button class="py-2 px-4 text-portal-blue border-b-2 border-portal-blue font-semibold">Results</button>
+                            <button class="py-2 px-4 text-gray-500 font-semibold">Attendance</button>
+                        </div>
+                         <div class="mt-4">
+                            <p class="text-sm text-gray-500">ID: <span id="modal-student-id"></span> | Total Hours: <span id="modal-student-hours"></span></p>
+                            <table class="w-full text-left text-sm mt-2">
+                                <thead>
+                                    <tr class="bg-gray-50">
+                                        <th class="p-2 font-semibold">Assessment</th>
+                                        <th class="p-2 font-semibold">Due Date</th>
+                                        <th class="p-2 font-semibold">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b"><td class="p-2">Unit 1 - Manage meetings (BBS012)</td><td class="p-2 text-gray-600">01/01/2021 - 06/07/2021</td><td></td></tr>
+                                    <tr class="border-b"><td class="p-2 pl-6">Assessment 1 - Presentation on Meeting</td><td class="p-2 text-gray-600">25/01/2021</td><td class="p-2 font-medium text-green-600">Satisfactory</td></tr>
+                                    <tr class="border-b"><td class="p-2 pl-6">Assessment 2 - OMR Test</td><td class="p-2 text-gray-600">25/01/2021</td><td class="p-2 font-medium text-red-600">Not Yet Satisfactory</td></tr>
+                                </tbody>
+                            </table>
+                         </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="toast-notification" class="fixed bottom-5 left-1/2 -translate-x-1/2 px-6 py-3 text-white rounded-lg shadow-lg opacity-0 translate-y-10 transition-all duration-300 z-50">
+                <p id="toast-message"></p>
+            </div>
+            <!-- END: MODALS & TOASTS -->
+            
+        </main>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+    <script>
+        // --- DATA MOCKUP ---
+        const dashboardData = {
+            studentName: 'Alex Johnson',
+            studentEmail: 'alex.j@school.edu',
+            cgpa: 3.85,
+            attendance: 92.5,
+            performanceHistory: [65, 70, 75, 80, 85, 90, 88], // Last 7 assessments scores
+            performanceLabels: ['A1', 'A2', 'A3', 'M1', 'A4', 'F1', 'F2'],
+            tests: [{
+                id: 1,
+                subject: 'Advanced Calculus',
+                syllabus: 'Integration techniques, Differential Equations (Ch 3-5)',
+                date: dayjs().add(5, 'day').format('MMM DD, YYYY'),
+                time: '10:00 AM',
+                previousScore: 78
+            }, {
+                id: 2,
+                subject: 'Computer Networks',
+                syllabus: 'OSI Model, TCP/IP, Routing Protocols',
+                date: dayjs().add(12, 'day').format('MMM DD, YYYY'),
+                time: '2:00 PM',
+                previousScore: 85
+            }],
+            subjects: [
+                { name: 'Data Structures', teacher: 'Dr. Evelyn Reed', room: 'B-103', avatar: 'ER' },
+                { name: 'Web Development', teacher: 'Prof. Mark Lee', room: 'L-205', avatar: 'ML' },
+                { name: 'Algorithms', teacher: 'Dr. Alan Turing', room: 'C-201', avatar: 'AT' },
+                { name: 'Intro to Finance', teacher: 'Ms. Sarah Connor', room: 'F-301', avatar: 'SC' }
+            ],
+            todoList: [
+                { id: 1, text: 'Review Calculus notes for Test', completed: false },
+                { id: 2, text: 'Finish Data Structures Assignment 3', completed: true },
+                { id: 3, text: 'Email Prof. Lee about Web Project', completed: false }
+            ],
+            quote: "The future belongs to those who believe in the beauty of their dreams."
+        };
+        
+        const chatGroupsData = [
+            { id: 'Project Phoenix', members: 5, messages: [
+                { sender: 'Alex Johnson', text: 'Hey team, I finalized the API endpoints. Need confirmation on the UI mockups by tomorrow!', time: '10:30 AM', self: true },
+                { sender: 'Jane Doe', text: 'Got it, looking over the mockups now. Will ping you later with feedback.', time: '10:35 AM', self: false },
+                { sender: 'John Smith', text: 'I completed the backend schema this morning. Ready for integration testing.', time: '10:45 AM', self: false },
+            ]},
+            { id: 'Calculus Study Group', members: 8, messages: [
+                { sender: 'Alex Johnson', text: 'Is anyone free to review the differential equations problems (Chapter 4) tonight?', time: '2:15 PM', self: true },
+                { sender: 'Mia Chen', text: 'I\'m free at 7 PM! I\'m stuck on problem 3.', time: '2:17 PM', self: false },
+            ]},
+            { id: 'CS Dept. Announcements', members: 50, messages: [
+                { sender: 'Admin', text: 'Reminder: The server maintenance scheduled for tonight has been postponed. You may continue working.', time: '8:00 AM', self: false },
+            ]},
+            { id: 'Hackathon Team', members: 4, messages: [
+                { sender: 'Alex Johnson', text: 'We need a catchy name for our app by 5 PM! Ideas?', time: '1:00 PM', self: true },
+            ]},
+            { id: 'Senior Design Project', members: 6, messages: [
+                { sender: 'David Lee', text: 'Prototype build is finished. Requesting testing session this week.', time: '9:00 AM', self: false },
+                { sender: 'Alex Johnson', text: 'Scheduled for Wednesday afternoon. Check the calendar invite.', time: '9:05 AM', self: true },
+            ]},
+        ];
+
+        // Data for timetable interaction (from timetable.html)
+        const classData = {
+            // ... (kept for Timetable page functionality)
+            'Mathematic': { teacher: 'Dr. Alan Turing', department: 'Mathematics Dept.', avatar: 'AT', code: 'MATH101', room: 'C-201', credits: '4', description: 'Covers topics in calculus, algebra, and geometry.' },
+            'Biology': { teacher: 'Dr. Rosalind Franklin', department: 'Biology Dept.', avatar: 'RF', code: 'BIO101', room: 'L-105', credits: '3', description: 'An introduction to cellular biology and genetics.' },
+            'English': { teacher: 'Prof. Jane Austen', department: 'Literature Dept.', avatar: 'JA', code: 'ENG202', room: 'H-302', credits: '3', description: 'A survey of 19th-century British literature.' },
+            'Indonesian': { teacher: 'Ibu Siti Rahayu', department: 'Languages Dept.', avatar: 'SR', code: 'INDO101', room: 'L-210', credits: '2', description: 'Fundamentals of the Indonesian language and culture.' },
+            'History': { teacher: 'Dr. Herodotus', department: 'History Dept.', avatar: 'DH', code: 'HIST100', room: 'H-101', credits: '3', description: 'A study of ancient civilizations and their impact.' },
+            'Religion': { teacher: 'Prof. Mircea Eliade', department: 'Theology Dept.', avatar: 'ME', code: 'REL250', room: 'T-100', credits: '2', description: 'Comparative study of world religions.' },
+            'Art and culture': { teacher: 'Mr. Vincent van Gogh', department: 'Fine Arts Dept.', avatar: 'VG', code: 'ART110', room: 'S-102', credits: '3', description: 'Practical studio course on painting techniques.' },
+            'Physics': { teacher: 'Dr. Marie Curie', department: 'Physics Dept.', avatar: 'MC', code: 'PHY201', room: 'S-301', credits: '4', description: 'Exploration of classical mechanics and thermodynamics.' },
+            'Crafts': { teacher: 'Ms. Anni Albers', department: 'Applied Arts Dept.', avatar: 'AA', code: 'CRAFT101', room: 'W-104', credits: '2', description: 'Hands-on introduction to various crafting disciplines.' }
+        };
+
+        // Student Data for Mark Attendance (from try2.html)
+        const studentData = [
+            { id: 'BSB1011', name: 'Jeremy Schmidt', hours: 12, status: 'present' }, 
+            { id: 'BSB1012', name: 'Carla Monteiro', hours: 11, status: 'absent' },
+            { id: 'BSB1013', name: 'Lungelo Ngcobo', hours: 12, status: 'present' }, 
+            { id: 'BSB1014', name: 'Sampson Tutton', hours: 12, status: 'late' },
+            { id: 'BSB1015', name: 'Abbie Wilson', hours: 12, status: 'present' }, 
+            { id: 'BSB1016', name: 'Sukhbirpal Dhalan', hours: 10, status: 'absent' },
+            { id: 'BSB1017', name: 'Joana Leite', hours: 12, status: 'present' }, 
+            { id: 'BSB1018', name: 'Shen Zhi', hours: 12, status: 'present' },
+            { id: 'BSB1019', name: 'Tatiana Gagetman', hours: 11, status: 'late' }, 
+            { id: 'BSB1020', name: 'Bárbara Coilla', hours: 12, status: 'present' },
+        ];
+        
+        // --- START: Combined JavaScript Logic ---
+        document.addEventListener('DOMContentLoaded', function () {
+            lucide.createIcons();
+
+            // --- CORE NAVIGATION LOGIC ---
+            const sidebar = document.querySelector('.sidebar');
+            const pages = document.querySelectorAll('.page');
+            const navLinks = document.querySelectorAll('.nav-links a[data-page]');
+            // Set initial page to Dashboard based on the user request
+            const initialPage = 'dashboard-page'; 
+            let chartInstance = null; // To store the Chart.js instance
+
+            
+            function setActivePage(pageId, optionalData) {
+                // 1. Manage Page Visibility
+                pages.forEach(page => {
+                    if (page.id === pageId) {
+                        page.classList.remove('hiding');
+                        page.classList.add('active');
+                        // Special handling for the chat page
+                        if (pageId === 'group-chat-page' && optionalData && optionalData.groupName) {
+                            renderChatPage(optionalData.groupName);
+                        }
+                    } else {
+                        if(page.classList.contains('active')) {
+                            page.classList.add('hiding');
+                            setTimeout(() => {
+                                page.classList.remove('active');
+                                page.classList.remove('hiding');
+                            }, 400); // Matches var(--page-transition-duration)
+                        } else {
+                             page.classList.remove('hiding');
+                        }
+                    }
+                });
+                
+                // 2. Manage Sidebar Active State
+                document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
+                document.querySelectorAll('.has-submenu').forEach(sm => sm.classList.remove('active'));
+                
+                navLinks.forEach(link => {
+                    if (link.getAttribute('data-page') === pageId) {
+                        let currentLi = link.closest('li');
+                        // Only add active state to main nav items, or the group-chat submenu item being actively viewed
+                        if (pageId !== 'group-chat-page' || link.dataset.group === optionalData?.groupName) {
+                            currentLi.classList.add('active');
+                        }
+                        
+                        let parentSubmenu = link.closest('.has-submenu');
+                        if (parentSubmenu) {
+                            parentSubmenu.classList.add('active');
+                            parentSubmenu.querySelector('.dropdown-toggle').closest('li').classList.add('active');
+                        }
+                    }
+                });
+                
+                // 3. Update Search Bar Placeholder for context
+                const searchInput = document.querySelector('.search form input');
+                const searchList = document.querySelector('.search ul');
+                if (pageId === 'dashboard-page') {
+                    searchInput.placeholder = "Search Dashboard....";
+                    searchList.innerHTML = '<li><a href="#"><h5>Find: Advanced Calculus Test</h5><p>View test syllabus and date.</p></a></li><li><a href="#"><h5>Complete ToDo: Review Notes</h5><p>Quickly mark task as done.</p></a></li>';
+                    if (pageId === 'dashboard-page' && !chartInstance) {
+                        // Ensure the chart renders only when the page is active and it hasn't been initialized
+                        setTimeout(initializePerformanceChart, 500);
+                    }
+                } else if (pageId === 'attendance-page') {
+                    searchInput.placeholder = "Search Attendance Records....";
+                    searchList.innerHTML = '<li><a href="#"><h5>Filter: Absent</h5><p>View all days missed in Math 301.</p></a></li><li><a href="#"><h5>Find: Sep 9, 2023</h5><p>Check status for a specific date.</p></a></li>';
+                } else if (pageId === 'mark-attendance-page') {
+                    searchInput.placeholder = "Search Students....";
+                    searchList.innerHTML = '<li><a href="#"><h5>Student: Jeremy Schmidt</h5><p>View ID: BSB1011</p></a></li><li><a href="#"><h5>Filter: Absent</h5><p>View all absent students.</p></a></li>';
+                } else if (pageId === 'timetable-page') {
+                    searchInput.placeholder = "Search Timetable....";
+                    searchList.innerHTML = '<li><a href="#"><h5>Timetable Search</h5><p>Find classes, rooms, or teachers.</p></a></li><li><a href="#"><h5>Math Assignment</h5><p>Due tomorrow at 5 PM.</p></a></li>';
+                } else {
+                     searchInput.placeholder = "Search....";
+                     searchList.innerHTML = '<li><a href="#"><h5>Calculus II Notes</h5><p>Your notes from the last lecture.</p></a></li><li><a href="#"><h5>Hackathon Announcement</h5><p>Latest update from the CS Department.</p></a></li>';
+                }
+            }
+
+            // Page link click listener
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const pageId = link.getAttribute('data-page');
+                    const groupName = link.getAttribute('data-group');
+                    setActivePage(pageId, { groupName });
+                });
+            });
+            
+            // Initial load state
+            setActivePage(initialPage);
+            if(initialPage === 'attendance-page' || initialPage === 'mark-attendance-page') {
+                document.querySelector('[data-page-group="attendance"]').classList.add('active');
+            }
+
+
+            // --- DASHBOARD LOGIC (NEW) ---
+            
+            // 1. Greeting and Date/Time
+            const dateTimeEl = document.getElementById('current-date-time');
+            function updateDateTime() {
+                if(dateTimeEl) {
+                    const now = dayjs();
+                    const time = now.format('h:mm:ss A');
+                    const date = now.format('dddd, MMM DD, YYYY');
+                    dateTimeEl.textContent = `${time} | ${date}`;
+                }
+            }
+            setInterval(updateDateTime, 1000);
+            updateDateTime();
+
+            // 3. Overall Stats Population
+            document.getElementById('cgpa-value').textContent = dashboardData.cgpa.toFixed(2);
+            document.getElementById('attendance-value').textContent = `${dashboardData.attendance.toFixed(1)}%`;
+
+            // 6. Subjects and Teachers Population
+            const subjectsListEl = document.getElementById('subjects-list');
+            dashboardData.subjects.forEach(sub => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition';
+                item.innerHTML = `
+                    <img src="https://placehold.co/40x40/E5E7EB/4B5563?text=${sub.avatar}" alt="${sub.avatar}" class="w-10 h-10 rounded-full flex-shrink-0">
+                    <div>
+                        <p class="font-semibold text-sm text-gray-800">${sub.name}</p>
+                        <p class="text-xs text-gray-500">Taught by ${sub.teacher}</p>
+                    </div>
+                    <span class="ml-auto text-xs text-blue-500 font-medium bg-blue-50 px-2 py-0.5 rounded-full">${sub.room}</span>
+                `;
+                subjectsListEl.appendChild(item);
+            });
+
+            // 2. Performance Graph Initialization
+            function initializePerformanceChart() {
+                const ctx = document.getElementById('performanceChart');
+                if (!ctx) return;
+                
+                if (chartInstance) {
+                    chartInstance.destroy(); // Destroy previous instance if it exists
+                }
+
+                chartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: dashboardData.performanceLabels,
+                        datasets: [{
+                            label: 'Assessment Score (%)',
+                            data: dashboardData.performanceHistory,
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.3,
+                            pointBackgroundColor: 'rgb(75, 192, 192)',
+                            pointBorderColor: '#fff',
+                            pointHoverRadius: 7,
+                            pointRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { mode: 'index', intersect: false }
+                        },
+                        scales: {
+                            y: {
+                                min: 0,
+                                max: 100,
+                                beginAtZero: true,
+                                title: { display: true, text: 'Score (%)' },
+                                grid: { color: 'rgba(233, 236, 239, 0.5)' }
+                            },
+                            x: {
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 5. Upcoming Test Logic (Collapsible)
+            const testsContainer = document.getElementById('upcoming-tests-container');
+            if(testsContainer) {
+                dashboardData.tests.forEach(test => {
+                    const testEl = document.createElement('div');
+                    testEl.className = 'border border-gray-200 rounded-xl shadow-sm overflow-hidden';
+                    testEl.innerHTML = `
+                        <div class="test-header flex justify-between items-center p-4 cursor-pointer bg-gray-50 hover:bg-gray-100 transition" data-test-id="${test.id}">
+                            <div>
+                                <h4 class="font-semibold text-gray-800">${test.subject}</h4>
+                                <p class="text-sm text-gray-500">${test.date} at ${test.time}</p>
+                            </div>
+                            <i data-lucide="chevron-down" class="chevron-icon w-5 h-5 text-gray-500 transition"></i>
+                        </div>
+                        <div class="test-details p-4 bg-white border-t border-gray-200" data-test-details-id="${test.id}">
+                            <div class="grid grid-cols-2 gap-y-3 gap-x-6 text-sm">
+                                <div>
+                                    <p class="text-gray-500">Syllabus Coverage:</p>
+                                    <p class="font-medium text-gray-700">${test.syllabus}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-500">Previous Test Score:</p>
+                                    <p class="font-bold text-lg ${test.previousScore > 80 ? 'text-green-600' : 'text-orange-600'}">${test.previousScore}%</p>
+                                </div>
+                            </div>
+                            <button class="mt-4 text-sm font-semibold text-portal-blue hover:underline">Go to Course Materials</button>
+                        </div>
+                    `;
+                    testsContainer.appendChild(testEl);
+                });
+
+                testsContainer.addEventListener('click', (e) => {
+                    const header = e.target.closest('.test-header');
+                    if (header) {
+                        header.classList.toggle('active');
+                        const detailsEl = document.querySelector(`[data-test-details-id="${header.dataset.testId}"]`);
+                        if (detailsEl) {
+                            if (header.classList.contains('active')) {
+                                detailsEl.style.maxHeight = detailsEl.scrollHeight + 'px';
+                            } else {
+                                detailsEl.style.maxHeight = '0';
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // 7. To-Do List Logic
+            let currentToDoList = dashboardData.todoList;
+            const todoListEl = document.getElementById('todo-list');
+            const todoInput = document.getElementById('todo-input');
+            const addTodoBtn = document.getElementById('add-todo-btn');
+            
+            function renderTodoList() {
+                if (!todoListEl) return;
+                todoListEl.innerHTML = '';
+                
+                currentToDoList.sort((a, b) => a.completed - b.completed);
+                
+                currentToDoList.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = `todo-item flex items-center justify-between p-2 border-b last:border-b-0 ${item.completed ? 'completed' : ''}`;
+                    li.setAttribute('data-id', item.id);
+                    li.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" data-action="toggle" class="w-4 h-4" ${item.completed ? 'checked' : ''}>
+                            <span class="text-sm font-medium text-gray-700">${item.text}</span>
+                        </div>
+                        <button data-action="delete" class="text-gray-400 hover:text-red-500 transition">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    `;
+                    todoListEl.appendChild(li);
+                });
+                lucide.createIcons();
+            }
+            
+            function addTodo() {
+                const text = todoInput.value.trim();
+                if (text) {
+                    const newId = currentToDoList.length ? Math.max(...currentToDoList.map(t => t.id)) + 1 : 1;
+                    currentToDoList.push({ id: newId, text, completed: false });
+                    todoInput.value = '';
+                    renderTodoList();
+                }
+            }
+
+            if(addTodoBtn) addTodoBtn.addEventListener('click', addTodo);
+            if(todoInput) todoInput.addEventListener('keypress', (e) => e.key === 'Enter' && addTodo());
+            
+            if(todoListEl) {
+                todoListEl.addEventListener('click', (e) => {
+                    const target = e.target.closest('button') || e.target.closest('input[type="checkbox"]');
+                    if (!target) return;
+                    
+                    const action = target.dataset.action;
+                    const itemId = parseInt(target.closest('.todo-item').dataset.id);
+                    const itemIndex = currentToDoList.findIndex(t => t.id === itemId);
+
+                    if (itemIndex === -1) return;
+
+                    if (action === 'delete') {
+                        currentToDoList.splice(itemIndex, 1);
+                        renderTodoList();
+                    } else if (action === 'toggle') {
+                        currentToDoList[itemIndex].completed = target.checked;
+                        renderTodoList();
+                    }
+                });
+                renderTodoList();
+            }
+
+            // 8. Quote (Already in HTML, no JS required beyond initial data setup)
+            document.getElementById('motivational-quote').textContent = dashboardData.quote;
+            
+            // --- GROUP CHAT LOGIC (NEW) ---
+            const chatMessagesEl = document.getElementById('chat-messages');
+            const chatTitleEl = document.getElementById('chat-group-title');
+            const chatMemberCountEl = document.getElementById('chat-member-count');
+            const chatInput = document.getElementById('chat-input');
+            const sendChatBtn = document.getElementById('send-chat-btn');
+            let activeGroup = null;
+
+            function renderMessage(message) {
+                const bubble = document.createElement('div');
+                bubble.className = `message-bubble ${message.self ? 'self' : 'other'}`;
+                bubble.innerHTML = `
+                    <p class="message-header">${message.sender} - ${message.time}</p>
+                    <p class="text-sm">${message.text}</p>
+                `;
+                chatMessagesEl.appendChild(bubble);
+            }
+
+            function renderChatPage(groupName) {
+                activeGroup = chatGroupsData.find(g => g.id === groupName);
+                
+                if (!activeGroup) {
+                    chatTitleEl.textContent = 'Group Not Found';
+                    chatMessagesEl.innerHTML = '<p class="text-center text-red-500 mt-10">Error: Chat group data is missing.</p>';
+                    chatMemberCountEl.textContent = '0 Members';
+                    return;
+                }
+                
+                chatTitleEl.textContent = activeGroup.id;
+                chatMemberCountEl.textContent = `${activeGroup.members} Members`;
+                chatMessagesEl.innerHTML = '';
+
+                activeGroup.messages.forEach(renderMessage);
+                
+                // Scroll to bottom after rendering messages
+                setTimeout(() => {
+                    if (chatMessagesEl) {
+                        chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+                    }
+                }, 50);
+            }
+
+            function sendNewMessage() {
+                const text = chatInput.value.trim();
+                if (!text || !activeGroup) return;
+
+                const newMessage = {
+                    sender: dashboardData.studentName,
+                    text: text,
+                    time: dayjs().format('h:mm A'),
+                    self: true
+                };
+
+                activeGroup.messages.push(newMessage);
+                renderMessage(newMessage);
+
+                chatInput.value = '';
+                chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+            }
+
+            if(sendChatBtn) sendChatBtn.addEventListener('click', sendNewMessage);
+            if(chatInput) chatInput.addEventListener('keypress', (e) => e.key === 'Enter' && sendNewMessage());
+
+            // --- REMAINING LOGIC (TIMETABLE, ATTENDANCE, SHARED UI) ---
+
+            // --- TIMETABLE LOGIC (from timetable.html) ---
+            const monthYearEl = document.getElementById('month-year');
+            const calendarGridEl = document.getElementById('calendar-grid');
+            const prevMonthBtn = document.getElementById('prev-month');
+            const nextMonthBtn = document.getElementById('next-month');
+            const classDetailsCard = document.getElementById('class-details-card');
+            const closeDetailsBtn = document.getElementById('close-details-btn');
+            const subjectCells = document.querySelectorAll('.subject-cell');
+            
+            let currentDate = dayjs('2021-05-19');
+
+            function renderCalendar() {
+                if (!monthYearEl || !calendarGridEl) return;
+                monthYearEl.textContent = currentDate.format('MMMM YYYY');
+                calendarGridEl.innerHTML = '';
+                const daysOfWeek = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+                daysOfWeek.forEach(day => {
+                    const dayEl = document.createElement('div');
+                    dayEl.className = 'text-gray-400 font-medium';
+                    dayEl.textContent = day;
+                    calendarGridEl.appendChild(dayEl);
+                });
+
+                const firstDayOfMonth = currentDate.startOf('month').day();
+                for (let i = 0; i < firstDayOfMonth; i++) {
+                    calendarGridEl.appendChild(document.createElement('div'));
+                }
+
+                const daysInMonth = currentDate.daysInMonth();
+                for (let i = 1; i <= daysInMonth; i++) {
+                    const dayEl = document.createElement('div');
+                    dayEl.textContent = i;
+                    let classes = 'cursor-pointer rounded-full w-7 h-7 flex items-center justify-center mx-auto';
+                    if (currentDate.month() === 4 && currentDate.year() === 2021 && i === 19) {
+                        classes += ' bg-blue-500 text-white';
+                    } else if (currentDate.month() === 4 && currentDate.year() === 2021 && i === 27) {
+                        classes += ' bg-blue-100 text-blue-600';
+                    } else {
+                        classes += ' hover:bg-gray-100';
+                    }
+                    dayEl.className = classes;
+                    calendarGridEl.appendChild(dayEl);
+                }
+            }
+            if (prevMonthBtn) prevMonthBtn.addEventListener('click', () => { currentDate = currentDate.subtract(1, 'month'); renderCalendar(); });
+            if (nextMonthBtn) nextMonthBtn.addEventListener('click', () => { currentDate = currentDate.add(1, 'month'); renderCalendar(); });
+            if (monthYearEl) renderCalendar();
+
+            if(subjectCells.length > 0) {
+                subjectCells.forEach(cell => {
+                    cell.addEventListener('click', () => {
+                        const subject = cell.dataset.subject;
+                        const data = classData[subject] || { teacher: 'N/A', department: 'N/A', avatar: '?', code: 'N/A', room: 'N/A', credits: 'N/A', description: 'No details available.' };
+
+                        document.getElementById('teacher-name').textContent = data.teacher;
+                        document.getElementById('teacher-department').textContent = data.department;
+                        document.getElementById('teacher-avatar').src = `https://placehold.co/80x80/E0E7FF/4F46E5?text=${data.avatar}`;
+                        document.getElementById('class-name').textContent = subject;
+                        document.getElementById('course-code').textContent = data.code;
+                        document.getElementById('class-room').textContent = data.room;
+                        document.getElementById('class-credits').textContent = data.credits;
+                        document.getElementById('class-description').textContent = data.description;
+                        
+                        setTimeout(() => {
+                            classDetailsCard.style.maxHeight = classDetailsCard.scrollHeight + 'px';
+                            classDetailsCard.classList.add('active');
+                        }, 50);
+                    });
+                });
+            }
+
+            if (closeDetailsBtn) {
+                closeDetailsBtn.addEventListener('click', () => {
+                    classDetailsCard.style.maxHeight = '0';
+                    classDetailsCard.classList.remove('active');
+                });
+            }
+            
+            // --- ATTENDANCE CHART & MARK ATTENDANCE LOGIC (from try2.html) ---
+            const container = document.getElementById('attendance-bar-chart');
+            if (container) {
+                const counts = { onTime: 52, late: 7, notYet: 1 };
+                const colors = { onTime: 'bg-blue-500', late: 'bg-orange-400', notYet: 'bg-slate-200' };
+                let chartHTML = '';
+
+                for (let i = 0; i < counts.onTime; i++) { chartHTML += `<div class="${colors.onTime} w-full h-full rounded-t-sm"></div>`; }
+                for (let i = 0; i < counts.late; i++) { chartHTML += `<div class="${colors.late} w-full h-full rounded-t-sm"></div>`; }
+                for (let i = 0; i < counts.notYet; i++) { chartHTML += `<div class="${colors.notYet} w-full h-full rounded-t-sm"></div>`; }
+                container.innerHTML = chartHTML;
+            }
+            
+            const studentList = document.getElementById('student-list');
+            const lectureHallDesks = document.getElementById('lecture-hall-desks');
+
+            function renderStudents() {
+                if (!studentList || !lectureHallDesks) return; 
+                studentList.innerHTML = '';
+                lectureHallDesks.innerHTML = '';
+                
+                let deskRow = document.createElement('div');
+                deskRow.className = 'desk-row';
+                let studentsPerDeskRow = 3; 
+
+                studentData.forEach((student, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="p-2 text-gray-600">${student.id}</td>
+                        <td class="p-2 font-semibold">${student.name}</td>
+                        <td class="p-2">
+                            <div class="flex items-center justify-center space-x-1 status-btn-group">
+                                <input type="radio" id="present-${student.id}" name="status-${student.id}" value="present" ${student.status === 'present' ? 'checked' : ''} data-id="${student.id}">
+                                <label for="present-${student.id}" class="status-btn present"><i data-lucide="check" class="w-4 h-4"></i>Present</label>
+                                
+                                <input type="radio" id="absent-${student.id}" name="status-${student.id}" value="absent" ${student.status === 'absent' ? 'checked' : ''} data-id="${student.id}">
+                                <label for="absent-${student.id}" class="status-btn absent"><i data-lucide="x" class="w-4 h-4"></i>Absent</label>
+                                
+                                <input type="radio" id="late-${student.id}" name="status-${student.id}" value="late" ${student.status === 'late' ? 'checked' : ''} data-id="${student.id}">
+                                <label for="late-${student.id}" class="status-btn late"><i data-lucide="clock" class="w-4 h-4"></i>Late</label>
+                            </div>
+                        </td>
+                        <td class="p-2 text-gray-600">${student.hours} Hours</td>
+                        <td class="p-2 text-green-600 font-medium">Enrolled</td>
+                        <td class="p-2 text-right">
+                            <button class="text-gray-500 hover:text-portal-blue view-details-btn" data-index="${index}"><i data-lucide="eye" class="w-5 h-5"></i></button>
+                        </td>
+                    `;
+                    studentList.appendChild(row);
+
+                    if (index > 0 && index % studentsPerDeskRow === 0) {
+                        lectureHallDesks.appendChild(deskRow);
+                        deskRow = document.createElement('div');
+                        deskRow.className = 'desk-row';
+                    }
+                    const desk = document.createElement('div');
+                    desk.className = 'desk';
+                    const dot = document.createElement('div');
+                    dot.className = `student-dot ${student.status}`;
+                    dot.dataset.studentId = student.id;
+                    desk.appendChild(dot);
+                    deskRow.appendChild(desk);
+                });
+                if (studentData.length > 0) lectureHallDesks.appendChild(deskRow);
+
+                lucide.createIcons();
+            }
+            if (studentList) {
+                renderStudents();
+            }
+
+            if(studentList) {
+                studentList.addEventListener('change', (e) => {
+                    if(e.target.type === 'radio') {
+                        const studentId = e.target.dataset.id;
+                        const newStatus = e.target.value;
+                        const studentDot = lectureHallDesks.querySelector(`.student-dot[data-student-id="${studentId}"]`);
+                        if(studentDot) {
+                            studentDot.className = `student-dot ${newStatus}`;
+                        }
+                    }
+                });
+            }
+
+            const filterContainer = document.getElementById('filter-container');
+            const checkmarkIcon = `<span class="w-4 h-4 mr-2 text-portal-blue"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><polyline points="20 6 9 17 4 12"></polyline></svg></span>`;
+
+            if(filterContainer) {
+                filterContainer.addEventListener('click', function(e) {
+                    const card = e.target.closest('.filter-card');
+                    if (card) {
+                        const parentGroup = card.closest('.filter-group');
+                        parentGroup.classList.toggle('open');
+                        document.querySelectorAll('.filter-group').forEach(group => {
+                            if (group !== parentGroup) {
+                                group.querySelector('.filter-card').classList.remove('active');
+                                group.querySelector('.filter-dropdown').classList.remove('open');
+                            }
+                        });
+                        parentGroup.querySelector('.filter-card').classList.toggle('active');
+                        parentGroup.querySelector('.filter-dropdown').classList.toggle('open');
+                    }
+
+                    const link = e.target.closest('a');
+                    if (link) {
+                        e.preventDefault();
+                        const parentGroup = link.closest('.filter-group');
+                        const valueDisplay = parentGroup.querySelector('[data-value]');
+                        const dropdown = parentGroup.querySelector('.filter-dropdown');
+                        
+                        valueDisplay.textContent = link.textContent.trim();
+                        dropdown.querySelectorAll('a').forEach(a => {
+                            if(a.firstChild && a.firstChild.tagName === 'SPAN') a.firstChild.remove();
+                        });
+                        link.insertAdjacentHTML('afterbegin', checkmarkIcon);
+
+                        parentGroup.querySelector('.filter-card').classList.remove('active');
+                        dropdown.classList.remove('open');
+                    }
+                });
+            }
+
+            const clearFiltersBtn = document.getElementById('clear-filters-btn');
+            if (clearFiltersBtn) {
+                clearFiltersBtn.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-group').forEach(group => {
+                        const valueDisplay = group.querySelector('[data-value]');
+                        valueDisplay.textContent = valueDisplay.dataset.value;
+                        group.querySelectorAll('a').forEach(a => {
+                            if(a.firstChild && a.firstChild.tagName === 'SPAN') a.firstChild.remove();
+                        });
+                    });
+                });
+            }
+
+            let currentStatus = '';
+            const locationStatusContainer = document.getElementById('location-status-container');
+            const statuses = [
+                { text: 'In Class', classes: 'bg-green-100 text-green-800' },
+                { text: 'Outside Class', classes: 'bg-orange-100 text-orange-800' }
+            ];
+
+            function updateLocationStatus() {
+                if(!locationStatusContainer) return;
+                const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+                currentStatus = randomStatus.text;
+                locationStatusContainer.innerHTML = `<div class="inline-block px-2.5 py-1 rounded-md text-xs font-semibold ${randomStatus.classes}">${randomStatus.text}</div>`;
+            }
+
+            if (locationStatusContainer) {
+                setInterval(updateLocationStatus, 4000);
+                updateLocationStatus();
+            }
+
+            const studentModal = document.getElementById('student-details-modal');
+            const modalStudentName = document.getElementById('modal-student-name');
+            const modalStudentId = document.getElementById('modal-student-id');
+            const modalStudentHours = document.getElementById('modal-student-hours');
+            const closeStudentModalBtn = document.getElementById('close-modal-btn');
+
+            function openStudentModal(student) {
+                if(!studentModal) return;
+                modalStudentName.textContent = student.name;
+                modalStudentId.textContent = student.id;
+                modalStudentHours.textContent = `${student.hours} Hours`;
+                studentModal.classList.remove('hidden');
+                setTimeout(() => {
+                    studentModal.classList.remove('opacity-0');
+                    studentModal.querySelector('div').classList.remove('scale-95');
+                }, 10);
+            }
+
+            function closeStudentModal() {
+                if(!studentModal) return;
+                studentModal.classList.add('opacity-0');
+                studentModal.querySelector('div').classList.add('scale-95');
+                setTimeout(() => studentModal.classList.add('hidden'), 300);
+            }
+            
+            if(studentList) {
+                studentList.addEventListener('click', function(e) {
+                    const viewBtn = e.target.closest('.view-details-btn');
+                    if (viewBtn) {
+                        openStudentModal(studentData[viewBtn.dataset.index]);
+                    }
+                });
+            }
+
+            if(closeStudentModalBtn) closeStudentModalBtn.addEventListener('click', closeStudentModal);
+            if(studentModal) studentModal.addEventListener('click', (e) => e.target === studentModal && closeStudentModal());
+
+            const saveAttendanceBtn = document.getElementById('save-attendance-btn');
+            const toast = document.getElementById('toast-notification');
+            const toastMessage = document.getElementById('toast-message');
+            let toastTimeout;
+
+            function showToast(message, type) {
+                if(!toast || !toastMessage) return;
+                clearTimeout(toastTimeout);
+                toast.className = 'fixed bottom-5 left-1/2 -translate-x-1/2 px-6 py-3 text-white rounded-lg shadow-lg opacity-0 translate-y-10 transition-all duration-300 z-50';
+                if (type) toast.classList.add(type);
+
+                toastMessage.textContent = message;
+                toast.classList.add('show');
+                toastTimeout = setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000);
+            }
+
+            if(saveAttendanceBtn) {
+                saveAttendanceBtn.addEventListener('click', () => {
+                    if (currentStatus === 'In Class') {
+                        showToast('Attendance marked successfully!', 'success');
+                    } else {
+                        showToast('You are not in class. Attendance cannot be marked.', 'error');
+                    }
+                });
+            }
+            
+            // --- SHARED UI LOGIC (Sidebar Toggle, Dropdowns, User Switch, Theme Switch) ---
+
+            // Search Bar JS (Copied from both files - identical logic)
+            $('.search').each(function() {
+                var self = $(this); var form = self.children('form'); var input = form.children('input');
+                var span = $('<span />').appendTo(form); var bar = self.children('.bar'); var close = self.children('.close');
+                var list = self.children('ul'); bar.on('click', function(e) { if (!self.hasClass('open') && !self.hasClass('prepare')) { e.stopPropagation(); self.addClass('open'); input.focus(); } });
+                $(document).on('click', function(e) { if (self.hasClass('open') && !self.hasClass('prepare') && !self.is(e.target) && self.has(e.target).length === 0) { self.removeClass('open'); } });
+                form.submit(function(e) { e.preventDefault(); if(!self.hasClass('prepare') && input.val().length > 0) { input.css('color', 'transparent'); input.blur(); $('<span />').text(input.val()).appendTo(bar); self.addClass('prepare submit'); setTimeout(function() { self.removeClass('submit'); }, 200); setTimeout(function() { self.addClass('animate'); bar.animate({ width: (self.outerWidth() - 32) }, 800, function() { var searchW = ((list.outerWidth() + 32) > (72 + bar.outerWidth())) ? (list.outerWidth() + 32) : 72 + bar.outerWidth(); self.animate({ width: searchW }, 400); setTimeout(function() { self.animate({ height: self.outerHeight() + list.outerHeight() }, 500, function() { list.addClass('show'); }); }, 200); }); setTimeout(function() { self.addClass('done'); }, 800); }, 1250); } });
+                close.on('click', function(e) { self.removeClass('done'); setTimeout(function() { list.removeClass('show'); bar.animate({ width: 32 }, 1000, function() { self.addClass('reset'); bar.children('span').remove(); setTimeout(function() { self.removeClass('animate reset prepare'); input.css('color', ''); setTimeout(function() { input.val(''); bar.removeAttr('style'); }, 200); }, 400); }); setTimeout(function() { self.animate({ height: 62 }, 400, function() { self.removeClass('open'); setTimeout(function() { self.removeAttr('style'); }, 450); }); }, 200); }, 500); });
+            });
+
+            // Sidebar Toggle Logic
+            const sidebarToggle = document.querySelector('.sidebar-toggle');
+            if (sidebarToggle && sidebar) {
+                sidebarToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('collapsed');
+                });
+            }
+
+            // Dropdown Toggle Logic (for sidebar navigation)
+            const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+            dropdownToggles.forEach(toggle => {
+                toggle.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    toggle.closest('.has-submenu').classList.toggle('active');
+                });
+            });
+
+            // User Switcher Logic
+            const userSwitchWrapper = document.querySelector('.user-switch-wrapper');
+            const userSwitchMenu = document.querySelector('.user-switcher-menu');
+            const userSwitchArrow = document.querySelector('.user-switch-arrow');
+            const switcherItems = document.querySelectorAll('.switcher-item');
+            const userNameDisplay = document.querySelector('.logo-details .logo-name');
+            const userRoleDisplay = document.querySelector('.logo-details .logo-subtext');
+            userSwitchWrapper.addEventListener('click', () => { userSwitchMenu.classList.toggle('active'); userSwitchArrow.classList.toggle('active'); });
+            switcherItems.forEach(item => { item.addEventListener('click', () => { const name = item.getAttribute('data-name'); const role = item.getAttribute('data-role'); userNameDisplay.textContent = name; userRoleDisplay.textContent = role; userSwitchMenu.classList.remove('active'); userSwitchArrow.classList.remove('active'); }); });
+
+            // Theme Switcher Logic
+            const themeSwitch = document.querySelector('.theme-switch');
+            const applyTheme = (theme) => { document.documentElement.setAttribute('data-theme', theme); localStorage.setItem('theme', theme); };
+            themeSwitch.addEventListener('click', () => { const currentTheme = document.documentElement.getAttribute('data-theme'); const newTheme = currentTheme === 'light' ? 'dark' : 'light'; applyTheme(newTheme); });
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            applyTheme(savedTheme);
+
+        });
+        // --- END: Combined JavaScript Logic ---
+    </script>
+
+</body>
+</html>

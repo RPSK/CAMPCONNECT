@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animated Sign Up/Login UI</title>
+    <!-- Font Awesome for social media icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        /* General Setup */
+        :root {
+            --blue-gradient-start: #2a73ff;
+            --blue-gradient-end: #6f59f6;
+            --pink-background: #fff0f0; /* Very soft pink */
+            --main-text-color: #333;
+            --placeholder-color: #999;
+            --button-blue: #5579f6;
+            --white: #ffffff;
+            --link-red: #ff527c;
+            --font-inter: "Inter", sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-inter);
+            /* Global transition for general smoothness, focusing on transform and color properties */
+            transition: color 0.3s ease, background-color 0.3s ease, transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f4f8; /* Light blue-grey background */
+            padding: 20px;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            max-width: 1100px;
+            height: auto;
+            min-height: 600px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        /* --- Left Panel Styling (Pure Gradient) --- */
+        .left-panel {
+            width: 45%;
+            /* Pure gradient as requested */
+            background: linear-gradient(135deg, var(--blue-gradient-start) 0%, var(--blue-gradient-end) 100%);
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+            
+            /* Styles for the 3D model container */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* Removed padding: 20px; to allow the animation to fill the entire box */
+        }
+        
+        .sketchfab-embed-wrapper {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        .sketchfab-embed-wrapper iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+        
+        /* Hide the Sketchfab attribution paragraph */
+        .left-panel .sketchfab-embed-wrapper p {
+            display: none !important;
+        }
+
+
+        /* --- Right Panel Styling (Form Area) --- */
+        .right-panel {
+            width: 55%;
+            padding: 30px;
+            background-color: var(--pink-background);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            flex-grow: 1;
+        }
+
+        .form-card {
+            background-color: var(--white);
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+            max-width: 350px;
+            width: 100%;
+            margin-top: 50px;
+            /* Animation on hover for the form card */
+            transition: box-shadow 0.4s ease;
+            
+            /* Animation Context Changes */
+            position: relative; /* CRITICAL for absolute positioning of form-content */
+            min-height: 450px; /* FIX: Increased height for better fit */
+            padding: 40px; /* Base padding */
+            padding-top: 100px; /* Reserve space for tabs */
+            padding-bottom: 40px; /* FIX: Increased bottom padding */
+        }
+
+        .form-card:hover {
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Relocate tabs using absolute positioning */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #f0f0f0;
+            
+            /* Animation Context Changes */
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            right: 40px;
+            z-index: 20; /* Ensure tabs are always on top */
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: var(--placeholder-color);
+            padding: 0 15px 10px 0;
+            cursor: pointer;
+            position: relative;
+            margin-right: 20px;
+            /* Ensure smooth transition for active state */
+            transition: color 0.3s ease, transform 0.1s ease;
+        }
+        
+        .tab-button:hover {
+            color: var(--button-blue);
+        }
+        
+        /* Click effect for tab buttons */
+        .tab-button:active {
+            transform: scale(0.98); 
+        }
+
+        .tab-button.active {
+            color: var(--main-text-color);
+        }
+
+        /* Underline for active tab */
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 60%;
+            height: 4px;
+            background-color: var(--button-blue);
+            border-radius: 2px;
+            /* Animation for the underline */
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+
+        /* Redefined Form Visibility/Animation for smooth transition */
+        .form-content {
+            display: flex;
+            flex-direction: column;
+            /* Absolute positioning to layer forms and enable transition */
+            position: absolute; 
+            top: 100px; /* Position below tabs (40px top padding + ~30px tab height + margins) */
+            left: 40px;
+            right: 40px;
+            /* FIX: Set a bottom boundary and use flex to push the button down */
+            bottom: 40px; /* Aligns with new form-card padding */
+            
+            /* Transition Initial (Hidden) State */
+            opacity: 0;
+            pointer-events: none; /* Make hidden form unclickable */
+            transform: translateY(15px); 
+            
+            transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+        }
+
+        .form-content.active {
+            /* Active State */
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0); /* Move to final position */
+        }
+        
+        /* FIX: Use flex properties inside form-content to align button at the bottom */
+        .form-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start; /* Start content at the top */
+        }
+
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.8em;
+            color: var(--placeholder-color);
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px 0;
+            border: none;
+            border-bottom: 1px solid #ccc;
+            font-size: 1em;
+            color: var(--main-text-color);
+            outline: none;
+            /* Smooth transition for border and box-shadow */
+            transition: border-bottom-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Enhanced hover/focus effect on inputs */
+        .input-group input:focus,
+        .input-group input:hover {
+             border-bottom-color: var(--button-blue);
+             box-shadow: 0 2px 0 var(--button-blue); /* Subtle lift effect */
+        }
+
+        .input-group input::placeholder {
+            color: #ddd;
+            opacity: 1;
+            font-size: 1em;
+        }
+
+        /* Main Button Animations */
+        .sign-up-button {
+            width: 100%;
+            padding: 15px;
+            text-decoration: none ;
+            background-color: var(--button-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: auto; /* Pushes the button to the bottom of the flex container (form-content) */
+            box-shadow: 0 4px 10px rgba(85, 121, 246, 0.3);
+            /* Smooth transitions for hover effects */
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+        }
+
+        .sign-up-button:hover {
+            background-color: #4369e5;
+            text-decoration: none;
+            transform: translateY(-2px); /* Subtle lift */
+            box-shadow: 0 8px 15px rgba(85, 121, 246, 0.4); /* Enhanced shadow */
+        }
+        
+        /* Click effect for main button */
+        .sign-up-button:active {
+            text-decoration: none;
+            transform: scale(0.98); /* Press down effect */
+            box-shadow: 0 4px 10px rgba(85, 121, 246, 0.3);
+        }
+
+        .account-link {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 0.9em;
+        }
+
+        .i-have-account {
+            color: var(--link-red);
+            text-decoration: none;
+            font-weight: 600;
+            /* Smooth transition for hover */
+            transition: opacity 0.3s ease, transform 0.2s ease;
+        }
+        
+        .i-have-account:hover {
+            opacity: 0.8;
+            transform: scale(1.02);
+        }
+        .new{
+            color: white;
+            text-decoration : none ; 
+        }
+
+        /* --- Footer Links --- */
+        .footer-links {
+            padding: 20px;
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--placeholder-color);
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+
+        .social-icons {
+            margin-bottom: 20px;
+            padding-top: 10px;
+        }
+
+        .social-icons a {
+            color: var(--placeholder-color);
+            margin: 0 12px;
+            font-size: 1.3em;
+            /* Smooth transition for icon interaction */
+            transition: color 0.3s ease, transform 0.2s ease;
+        }
+
+        .social-icons a:hover {
+            color: var(--button-blue);
+            transform: scale(1.3) rotate(5deg); /* Bounce and spin effect */
+        }
+
+        .contact-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 0.9em;
+        }
+
+        .contact-info span {
+            color: var(--main-text-color);
+            font-weight: 500;
+        }
+
+        .contact-info .fa-envelope {
+            color: var(--link-red);
+            margin-right: 5px;
+        }
+
+        /* --- Responsive Design --- */
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+                min-height: 80vh;
+                max-width: 500px;
+            }
+
+            .left-panel, .right-panel {
+                width: 100%;
+                border-radius: 0;
+                padding: 0; /* Remove padding from left panel for a cleaner look when stacked */
+            }
+
+            .left-panel {
+                height: 150px; /* Reduced height for mobile */
+                border-top-left-radius: 20px;
+                border-top-right-radius: 20px;
+            }
+            
+            .right-panel {
+                padding: 30px 20px;
+                border-bottom-left-radius: 20px;
+                border-bottom-right-radius: 20px;
+            }
+
+            .form-card {
+                margin: 0 auto;
+                padding: 30px 25px;
+                padding-top: 100px; /* Maintain space for tabs */
+                padding-bottom: 40px; /* Adjusted bottom padding */
+            }
+            
+            /* Adjust positioning of absolute elements for mobile */
+            .tabs, .form-content {
+                left: 25px;
+                right: 25px;
+            }
+            
+            /* Mobile Form Fix */
+            .form-content {
+                bottom: 40px; /* Set bottom boundary */
+            }
+
+
+            .footer-links {
+                margin-top: 30px;
+            }
+        }
+        @media (max-width: 500px) {
+            .contact-info {
+                flex-direction: column;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Panel: Pure Gradient Background -->
+        <div class="left-panel">
+            <div class="sketchfab-embed-wrapper"> 
+                <iframe title="Zuriah" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src="https://sketchfab.com/models/514543dd90d54b23a5492f131f89d6f9/embed?autospin=1&autostart=1&preload=1&transparent=1"> </iframe> 
+                <p style="font-size: 13px; font-weight: normal; margin: 5px; color: #4A4A4A;"> 
+                    <a href="https://sketchfab.com/3d-models/zuriah-514543dd90d54b23a5492f131f89d6f9?utm_medium=embed&utm_campaign=share-popup&utm_content=514543dd90d54b23a5492f131f89d6f9" target="_blank" rel="nofollow" style="font-weight: bold; color: #1CAAD9;"> Zuriah </a> by <a href="https://sketchfab.com/dunx?utm_medium=embed&utm_campaign=share-popup&utm_content=514543dd90d54b23a5492f131f89d6f9" target="_blank" rel="nofollow" style="font-weight: bold; color: #1CAAD9;"> dunx </a> on <a href="https://sketchfab.com?utm_medium=embed&utm_campaign=share-popup&utm_content=514543dd90d54b23a5492f131f89d6f9" target="_blank" rel="nofollow" style="font-weight: bold; color: #1CAAD9;">Sketchfab</a>
+                </p>
+            </div>
+        </div>
+
+        <!-- Right Panel: Form Area -->
+        <div class="right-panel">
+            <div class="form-card">
+                <div class="tabs">
+                    <button class="tab-button active" id="signUpTab" href="CampConnect.html" ><a>Sign Up</a></button>
+                    <button class="tab-button" id="signInTab" href="CampConnect.html">Sign In</button>
+                </div>
+
+                <!-- Sign Up Form (Active by default) -->
+                <form id="signUpForm" class="form-content active">
+                    <div class="input-group">
+                        <label for="fullName">Full Name</label>
+                        <input type="text" id="fullName" placeholder="Aldirego">
+                    </div>
+                    <div class="input-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" placeholder="aldirego@email.com">
+                    </div>
+                    <div class="input-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="sign-up-button"><a  href="CampConnect.html" class = "new">Sign Up</a></button>
+                    <p class="account-link">
+                        <a href="#" class="i-have-account" onclick="event.preventDefault(); document.getElementById('signInTab').click();">I have an Account?</a>
+                    </p>
+                </form>
+
+                <!-- Sign In Form (Default state, will use form-content base styles) -->
+                <!-- Removed 'hidden' class to rely on CSS for transition -->
+                <form id="signInForm" class="form-content">
+                    <!-- Simplified form for demonstration -->
+                    <div class="input-group">
+                        <label for="signInEmail">Email</label>
+                        <input type="email" id="signInEmail" placeholder="aldirego@email.com">
+                    </div>
+                    <div class="input-group">
+                        <label for="signInPassword">Password</label>
+                        <input type="password" id="signInPassword" placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="sign-up-button"><a  href="CampConnect.html" class = "new">Sign In</a></button>
+                    <p class="account-link">
+                        <a href="#" class="i-have-account" onclick="event.preventDefault(); document.getElementById('signUpTab').click();">Need an Account?</a>
+                    </p>
+                </form>
+            </div>
+
+            <div class="footer-links">
+                <div class="social-icons">
+                    <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                    <a href="#" aria-label="Pinterest"><i class="fab fa-pinterest-p"></i></a>
+                </div>
+                <div class="contact-info">
+                    <span>959812**67</span>
+                    <span>|</span>
+                    <span><i class="fas fa-envelope"></i> info@mydiscountedlabs.in</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const signUpTab = document.getElementById('signUpTab');
+            const signInTab = document.getElementById('signInTab');
+            const signUpForm = document.getElementById('signUpForm');
+            const signInForm = document.getElementById('signInForm');
+
+            // Function to handle tab switching
+            const switchTab = (activeTab, inactiveTab, activeForm, inactiveForm) => {
+                activeTab.classList.add('active');
+                inactiveTab.classList.remove('active');
+                
+                // Deactivate the old form (removes 'active' state for fade/slide-out)
+                inactiveForm.classList.remove('active');
+                
+                // Activate the new form (adds 'active' state for fade/slide-in)
+                activeForm.classList.add('active');
+            };
+
+            // Event listener for Sign Up tab
+            if (signUpTab) {
+                signUpTab.addEventListener('click', () => {
+                    switchTab(signUpTab, signInTab, signUpForm, signInForm);
+                });
+            }
+
+            // Event listener for Sign In tab
+            if (signInTab) {
+                signInTab.addEventListener('click', () => {
+                    switchTab(signInTab, signUpTab, signInForm, signUpForm);
+                });
+            }
+
+            // Prevent default form submission behavior for placeholders
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    console.log('Form submitted (functionality not implemented)');
+                    // In a real app, you would handle authentication here.
+                });
+            });
+        });
+    </script>
+</body>
+</html>
